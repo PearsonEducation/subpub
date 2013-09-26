@@ -1,6 +1,6 @@
 Overview
 ========
-True to it's name, SubPub is a system-to-system messaging solution designed to be a "black box", hiding as much
+True to it's name, subpub is a system-to-system messaging solution designed to be a "black box", hiding as much
 as possible the complexity inherent in messaging.  It's design goals are:
 
 1. Interoperability
@@ -8,7 +8,7 @@ as possible the complexity inherent in messaging.  It's design goals are:
 3. Standard messaging stereotype (Pub/Sub, Request/Reply)
 4. "Always On" architecture
 
-In short, events are published into SubPub to which multiple consumers may subscribe to, for which SubPub
+In short, events are published into subpub to which multiple consumers may subscribe to, for which SubPub
 guarantees *at least once* delivery.
 SubPub services wrap two sides (publishing and delivery) of the RabbitMQ AMQP messaging broker.
 On the front-end/publishing side is an HTTP RESTful endpoint that allows a Principal to manage subscriptions
@@ -28,8 +28,8 @@ Erlang will need to be installed locally.  On OS X, it's as simple as
 Alternatively, you could download and install from source:
 
     wget http://www.erlang.org/download/otp_src_R15B01.tar.gz
-    tar zxvf otp\_src\_R15B01.tar.gz
-    cd otp\_src\_R15B01
+    tar zxvf otp_src_R15B01.tar.gz
+    cd otp_src_R15B01
     ./configure
     make
     sudo make install
@@ -45,9 +45,9 @@ If you are on OS X, Homebrew is the easiest way to get up and running.
 
 And if you're installing from source:
 
-    wget http://www.rabbitmq.com/releases/rabbitmq-server/v2.8.1/rabbitmq-server\_2.8.1-1\_all.deb
-    sudo dpkg -i --force-depends rabbitmq-server\_2.8.1-1\_all.deb
-    sudo rabbitmq-plugins enable rabbitmq\_management
+    wget http://www.rabbitmq.com/releases/rabbitmq-server/v2.8.1/rabbitmq-server_2.8.1-1_all.deb
+    sudo dpkg -i --force-depends rabbitmq-server_2.8.1-1_all.deb
+    sudo rabbitmq-plugins enable rabbitmq_management
     sudo /etc/init.d/rabbitmq-server restart
 
 Developing
@@ -56,7 +56,7 @@ Let's get 'er running...
 
 Building
 --------
-    export ERL\_LIBS="deps/erlang:$ERL\_LIBS"
+    export ERL_LIBS="deps/erlang:$ERL_LIBS"
     ./rebar clean compile
 
 Running locally
@@ -65,11 +65,11 @@ Ensure that RabbitMQ is running locally and can accept connections from Prosper.
 
     rabbitmq-server
 
-And fire up Prosper.io:
+And fire up subpub:
 
     ./shell
 
-Assuming all goes well, you can check your local Prosper.io service at 
+Assuming all goes well, you can check your local subpub service at 
 [the status link] (http://localhost:4778/v1/status).
 
 It should show something like this:
