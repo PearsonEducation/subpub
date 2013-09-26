@@ -1,0 +1,24 @@
+{
+  "name": "prospero-test-harness",
+  "version": "0.0.1",
+  "author": "Chris Chew <chrisch@ecollege.com>",
+  "contributors": [
+    "Chris Chew <chrisch@ecollege.com>"
+  ],
+  "dependencies": {
+    "metrics": "latest",
+    "express": "latest",
+    "eclg-prospero": "git+ssh://git@github.com:chriskchew/prospero-node.git",
+    "optimist": "latest",
+    "mongodb": "latest",
+    "cli-table": "latest"
+  },
+  "keywords": [
+    "prospero",
+    "ecollege",
+    "pearson"
+  ],
+  "engines": {
+    "node": ">= 0.4.8"
+  }
+}

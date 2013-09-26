@@ -1,0 +1,284 @@
+<HEAD>
+<SCRIPT>
+
+function getParameterByName(name)
+{
+    name = name.replace(/[\[]/, "\\\[").replace(/[\]]/, "\\\]");
+	var regex = new RegExp("[\\?&]" + name + "=([^&#]*)"), results = regex.exec(location.search);
+	return results == null ? "" : decodeURIComponent(results[1].replace(/\+/g, " "));
+}
+
+function load_principal()
+{
+	var id = getParameterByName("ID");
+	var url = "/v1/principal/" + id;
+
+	var xhr = new window.XMLHttpRequest;
+	xhr.open("GET", url, true);
+	xhr.onreadystatechange = function() {
+		load_principal_cb(xhr);
+	}; 
+	xhr.send();
+}
+
+function clear_tags()
+{
+	var table = document.getElementById("tag_table");
+	for (i = 1; i < table.rows.length; i++)
+	{
+		table.deleteRow(i);
+	}
+}
+
+function populate(principal)
+{
+	clear_tags();
+	populate_fields(principal);
+	populate_tags(principal);
+	setup_active_button(principal);
+}
+
+function setup_active_button(principal)
+{
+	var button = document.getElementById("active_button");
+
+	if (principal.date_deactivated == "")
+	{
+		button.innerText = "Deactivate";
+		button.onclick = function () {
+			deactivate_principal(principal.id);
+		}
+	}
+	else
+	{
+		button.innerText = "Activate";
+		button.onclick = function () {
+			activate_principal(principal.id);
+		}
+	}
+}
+
+function activate_principal_cb(xhr)
+{
+	if (xhr.readyState == 4)
+	{
+		load_principal();
+	}
+}
+
+function activate_principal(id)
+{
+	var id = getParameterByName("ID");
+	var url = "/v1/principal/" + id + "/activate";
+
+	var xhr = new window.XMLHttpRequest;
+	xhr.open("GET", url, true);
+	xhr.onreadystatechange = function() {
+		activate_principal_cb(xhr);
+	}; 
+	xhr.send();
+}
+
+function populate_fields(principal)
+{
+	var cell;
+
+	cell = document.getElementById("field_id");
+	cell.innerHTML = principal.id;
+
+	cell = document.getElementById("field_friendly");
+	cell.innerHTML = principal.friendly_name;
+
+	cell = document.getElementById("field_require_message_type");
+	if (principal.require_message_type)
+	{
+		cell.innerHTML = "Yes";
+	}
+	else
+	{
+		cell.innerHTML = "No";
+	}
+
+	cell = document.getElementById("field_mask");
+	cell.innerHTML = principal.delivery_url_mask;
+
+	cell = document.getElementById("field_realm");
+	cell.innerHTML = principal.realm;
+
+	cell = document.getElementById("field_secret");
+	cell.innerHTML = principal.secret;
+
+	cell = document.getElementById("field_date_activated");
+	cell.innerHTML = principal.date_created;
+
+	cell = document.getElementById("field_date_deactivated");
+	cell.innerHTML = principal.date_deactivated;
+}
+
+
+function populate_tags(principal)
+{
+	var table = document.getElementById("tag_table");
+
+	for (index in principal.enforced_tag_ids)
+	{
+		var tag = principal.enforced_tag_ids[index];
+		var row = table.insertRow(-1);
+		var cell;
+
+		cell = row.insertCell(-1);
+		cell.innerHTML = tag.type;
+
+		cell = row.insertCell(-1);
+		cell.innerHTML = tag.value;
+	}
+}
+
+function load_principal_cb(xhr)
+{
+	if (xhr.readyState == 4)
+	{
+		var result = JSON.parse(xhr.responseText);
+		populate(result);
+	}
+}
+
+function deactivate_principal(id)
+{
+	if (confirm("Deactivate " + id))
+	{
+		deactivate(id);
+	}
+}
+
+
+function deactivate_cb(xhr)
+{
+	if (xhr.readyState == 4)
+	{
+		load_principal();
+	}
+}
+
+function deactivate(id)
+{
+	var url = "/v1/principal/" + id + "/deactivate";
+	var xhr = new window.XMLHttpRequest;
+	xhr.open("GET", url, true);
+	xhr.onreadystatechange = function() {
+		deactivate_cb(xhr);
+	}; 
+	xhr.send();
+}
+
+function view_principal (id)
+{
+	window.location = "view_principal.html?ID=" + id;
+}
+
+function go_back(xhr)
+{
+
+	window.location = "principals.html";
+}
+
+
+function create_principal()
+{
+	window.location = "create_principal.html";
+}
+
+function do_delete_principal_cb(xhr)
+{
+	if (xhr.readyState == 4)
+	{
+		go_back();
+	}
+}
+
+function do_delete_principal(id)
+{
+	var url = "/v1/principal/" + id;
+	var xhr = new window.XMLHttpRequest;
+	xhr.open("DELETE", url, true);
+	xhr.onreadystatechange = function() {
+		do_delete_principal_cb(xhr);
+	};
+	xhr.send();
+}
+
+function delete_principal()
+{
+	var element = document.getElementById("field_id");
+	var id = element.innerText;
+
+	if (confirm("Deactivate and delete " + id))
+	{
+		do_delete_principal(id);
+	}
+}
+
+function view_subscriptions()
+{
+	var principal = getParameterByName("ID");
+	var url = "subscriptions.html?PRINCIPAL=" + principal;
+	window.location = url;
+}
+
+load_principal();
+
+</SCRIPT>
+</HEAD>
+<BODY>
+<H2>Principals</H2>
+
+<TABLE border="1">
+<TR>
+	<TH>ID</TH>
+	<TD id="field_id"/>
+</TR>
+<TR>
+	<TH>User Friendly ID</TH>
+	<TD id="field_friendly"/>
+</TR>
+<TR>
+	<TH>Requires Message Type</TH>
+	<TD id="field_require_message_type"/>
+</TR>
+<TR>
+	<TH>Mask</TH>
+	<TD id="field_mask"/>
+</TR>
+<TR>
+	<TH>Realm</TH>
+	<TD id="field_realm"/>
+</TR>
+<TR>
+	<TH>Secret</TH>
+	<TD id="field_secret"/>
+</TR>
+<TR>
+	<TH>Date Activated</TH>
+	<TD id="field_date_activated"/>
+</TR>
+<TR>
+	<TH>Date Deactivated</TH>
+	<TD id="field_date_deactivated"/>
+</TR>
+</TABLE>
+
+<H3>Required Tags</H3>
+<TABLE border="1" id="tag_table">
+<TR>
+	<TH>Tag</TH><TH>Value</TH>
+</TR>
+</TABLE>
+
+<P>
+<BUTTON onclick="go_back()">Back</BUTTON>
+<BUTTON onclick="view_subscriptions()">Subscriptions</BUTTON>
+<BUTTON id="active_button" onclick="deactivate_principal()">Fnord</BUTTON>
+<BUTTON id="delete_button" onclick="delete_principal()">Delete</BUTTON>
+</P>
+
+</BODY>

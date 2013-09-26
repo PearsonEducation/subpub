@@ -1,0 +1,31 @@
+#!/bin/sh
+
+. "`dirname $0`/../deploy/scripts/always_included.sh"
+
+if [ -z "$NOT_DETACHED" ]
+then
+  DETACHED="-detached"
+else
+  DETACHED=""
+fi
+
+ORIG_PATH=`pwd`
+cd `dirname $0`
+cd ..
+
+
+if [ -z "$1" ]
+then
+  PNODE=prospero
+  echo "Prospero node name not specified, defaulting to $PNODE\n"
+else
+  PNODE=$1
+fi
+
+ulimit -n 99999
+
+export ERL_LIBS="$depsdir/erlang:$ERLANG_LIB_DIR"
+
+erl -env ERL_MAX_PORTS 50000 -K true -A30 -P 1048576 +W i -pa ebin -boot start_sasl -config prospero -name $PNODE -setcookie "${PROSPERO_ERLANG_COOKIE}" -s pe_app go $DETACHED -mnesia dir "\"${PROSPERO_MNESIA_DIR}\"" -sasl errlog_type all -sasl sasl_error_logger '{file,"'${SASL_LOG_PATH}'"}'
+
+cd $ORIG_PATH

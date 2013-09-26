@@ -1,0 +1,9 @@
+  <subscription id="$id$">
+    <principal_id>$principal_id$</principal_id>
+    <callback_url>$callback_url$</callback_url>
+    <queue_name>$queue_name$</queue_name>
+    <tags>
+$map tag_template tags$    </tags>
+    <date_created>$date_created$</date_created>
+    <date_cancelled>$date_cancelled$</date_cancelled>
+  </subscription>

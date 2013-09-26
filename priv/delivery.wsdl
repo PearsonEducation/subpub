@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<wsdl:definitions xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/"
+                  xmlns:ns="http://delivery.wsdl.prospero.ecollege.com"
+                  xmlns:wsaw="http://www.w3.org/2006/05/addressing/wsdl"
+                  xmlns:http="http://schemas.xmlsoap.org/wsdl/http/"
+                  xmlns:xs="http://www.w3.org/2001/XMLSchema"
+                  xmlns:mime="http://schemas.xmlsoap.org/wsdl/mime/"
+                  xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+                  xmlns:soap12="http://schemas.xmlsoap.org/wsdl/soap12/"
+                  xmlns:schema="http://delivery.wsdl.prospero.ecollege.com"
+                  targetNamespace="http://delivery.wsdl.prospero.ecollege.com">
+    <wsdl:types>
+      <xs:schema elementFormDefault="qualified" targetNamespace="http://delivery.wsdl.prospero.ecollege.com">
+        <xs:element name="deliver" type="schema:reqType"/>
+        <xs:element name="deliverResponse" type="schema:respType"/>
+
+        <xs:complexType name="reqType">
+          <xs:sequence>
+            <xs:element name="messageType" type="xs:string"/>
+            <xs:element name="messageId" type="xs:string"/>
+            <xs:element name="attemptId" type="xs:string"/>
+            <xs:element name="authenticationToken" type="xs:string"/>
+            <xs:element name="authenticationDelimiter" type="xs:string"/>
+            <xs:element name="payloadContentType" type="xs:string"/>
+            <xs:element name="payload" type="xs:string"/>
+          </xs:sequence>
+        </xs:complexType>
+
+        <xs:complexType name="respType">
+          <xs:sequence>
+            <xs:element name="return" type="schema:DeliveryResponse" />
+          </xs:sequence>
+        </xs:complexType>
+
+        <xs:complexType name="DeliveryResponse">
+          <xs:sequence>
+            <xs:element name="confirmationNumber" type="xs:string" />
+          </xs:sequence>
+        </xs:complexType>
+      </xs:schema>
+    </wsdl:types>
+    <wsdl:message name="deliverRequest">
+        <wsdl:part name="parameters" element="schema:deliver"/>
+    </wsdl:message>
+    <wsdl:message name="deliverResponse">
+        <wsdl:part name="parameters" element="schema:deliverResponse"/>
+    </wsdl:message>
+    <wsdl:portType name="DeliveryServicePortType">
+        <wsdl:operation name="deliver">
+            <wsdl:input message="ns:deliverRequest" wsaw:Action="urn:deliver"/>
+            <wsdl:output message="ns:deliverResponse" wsaw:Action="urn:deliverResponse"/>
+        </wsdl:operation>
+    </wsdl:portType>
+    <wsdl:binding name="DeliveryServiceSoap11Binding" type="ns:DeliveryServicePortType">
+        <soap:binding transport="http://schemas.xmlsoap.org/soap/http" style="document"/>
+        <wsdl:operation name="deliver">
+            <soap:operation soapAction="urn:deliver" style="document"/>
+            <wsdl:input>
+                <soap:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap:body use="literal"/>
+            </wsdl:output>
+        </wsdl:operation>
+    </wsdl:binding>
+    <wsdl:binding name="DeliveryServiceSoap12Binding" type="ns:DeliveryServicePortType">
+        <soap12:binding transport="http://schemas.xmlsoap.org/soap/http" style="document"/>
+        <wsdl:operation name="deliver">
+            <soap12:operation soapAction="urn:deliver" style="document"/>
+            <wsdl:input>
+                <soap12:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap12:body use="literal"/>
+            </wsdl:output>
+        </wsdl:operation>
+    </wsdl:binding>
+    <wsdl:service name="DeliveryService">
+        <wsdl:port name="DeliveryServiceHttpSoap11Endpoint" binding="ns:DeliveryServiceSoap11Binding">
+            <soap:address location="https://soatest2.edmc.edu/soa/DeliveryService"/>
+        </wsdl:port>
+        <wsdl:port name="DeliveryServiceHttpSoap12Endpoint" binding="ns:DeliveryServiceSoap12Binding">
+            <soap12:address location="https://soatest2.edmc.edu/soa/DeliveryService"/>
+        </wsdl:port>
+        <wsdl:port name="DeliveryServiceHttpEndpoint" binding="ns:DeliveryServiceHttpBinding">
+            <http:address location="http://localhost/DeliveryService"/>
+        </wsdl:port>
+    </wsdl:service>
+</wsdl:definitions>

@@ -1,0 +1,254 @@
+<HEAD>
+<SCRIPT>
+
+function create_button(text)
+{
+	var button = document.createElement("button");
+	var textNode = document.createTextNode(text);
+	button.appendChild(textNode);
+
+	return button;
+}
+
+function fields_are_valid()
+{
+	var el;
+
+	el = document.getElementById("field_id");
+	if (el.value == "")
+	{
+		alert ("Please supply an ID");
+		return false;
+	}
+
+	el = document.getElementById("field_friendly_id");
+	if (el.value == "")
+	{
+		alert ("Please supply a friendly ID");
+		return false;
+	}
+
+	el = document.getElementById("field_mask");
+	if (el.value == "")
+	{
+		alert ("Please supply a URL mask");
+		return false;
+	}
+
+	el = document.getElementById("field_realm");
+	if (el.value == "")
+	{
+		alert ("Please supply a realm");
+		return false;
+	}
+
+	el = document.getElementById("field_secret_key");
+	if (el.value == "")
+	{
+		alert ("Please supply a secret key");
+		return false;
+	}
+
+	return true;
+}
+
+function build_one_tag (row)
+{
+	var name = row.cells[1].innerHTML;
+	var value = row.cells[2].innerHTML;
+
+	var tag = new Object();
+	tag.id = name + ":" + value;
+	tag.type = name;
+	tag.value = value;
+
+	return tag;
+}
+
+function build_tags () 
+{
+	var tags = new Array();
+	var table = document.getElementById("tag_table");
+	for (i = 1; i < table.rows.length; i++)
+	{
+		tags[i-1] = build_one_tag(table.rows[i]);
+	}
+
+	return tags;
+}
+
+
+function send_create_request_cb(xhr)
+{
+	if (xhr.readyState == 4)
+	{
+		if (xhr.status == 200)
+		{
+			go_back();
+		}
+		else
+		{
+			alert ("Error status = " + xhr.status + ", " + xhr.responseText);
+		}
+	}
+}
+
+function go_back()
+{
+	window.location.replace(document.referrer);
+}
+
+function send_create_request()
+{
+	var principal = new Object();
+	principal.id = document.getElementById("field_id").value;
+	principal.friendly_name = document.getElementById("field_friendly_id").value;
+	principal.require_message_type = document.getElementById("require_message_type").checked;
+	principal.delivery_url_mask = document.getElementById("field_mask").value;
+	principal.realm = document.getElementById("field_realm").value;
+	principal.secret = document.getElementById("field_secret_key").value;
+
+	principal.enforced_tags = build_tags();
+
+	var text = JSON.stringify(principal);
+
+	var xhr = new window.XMLHttpRequest;
+	xhr.open("POST", "/v1/principal", true);
+	xhr.onreadystatechange = function() {
+		send_create_request_cb(xhr);
+	}; 
+	xhr.send(text);
+}
+
+
+function create_principal()
+{
+	if (fields_are_valid())
+	{
+		send_create_request();
+	}
+}
+
+function cancel()
+{
+	window.location = "principals.html";
+}
+
+function tag_fields_valid()
+{
+	var e = document.getElementById("tag_name");
+	var tag_name = e.value;
+	e = document.getElementById("tag_value");
+	var tag_value = e.value;
+
+	if (tag_name == "")
+	{
+		alert ("please supply a tag name");
+		return false;
+	}
+
+	if (tag_value == "")
+	{
+		alert ("please supply a tag value");
+		return false;
+	}
+
+	return true;
+}
+
+
+function build_tag_row()
+{
+	var e = document.getElementById("tag_name");
+	var tag_name = e.value;
+	e = document.getElementById("tag_value");
+	var tag_value = e.value;
+
+	var table = document.getElementById("tag_table");
+	var row = table.insertRow(-1);
+
+	var button, cell;
+
+	cell = row.insertCell(-1);
+	button = create_button("Delete");
+	button.onclick = function() {
+		delete_tag(row.rowIndex);
+	}
+	cell.appendChild(button);
+
+	cell = row.insertCell(-1);
+	cell.innerHTML = tag_name;
+
+	cell = row.insertCell(-1);
+	cell.innerHTML = tag_value;
+}
+
+
+function add_tag()
+{
+	if (tag_fields_valid())
+	{
+		build_tag_row();
+		var e = document.getElementById("tag_name");
+		e.value = "";
+		e = document.getElementById("tag_value");
+		e.value = "";
+	}
+}
+
+function delete_tag(index)
+{
+	var table = document.getElementById("tag_table");
+	table.deleteRow(index);
+}
+
+</SCRIPT>
+</HEAD>
+<BODY>
+<H2>Create Principal</H2>
+<P>
+<BUTTON onclick="cancel()">Cancel</BUTTON>
+<BUTTON onclick="create_principal()">Create</BUTTON>
+</P>
+
+<TABLE id="principals" border="1">
+<TR>
+	<TH>ID</TH><TD><INPUT type="text" id="field_id"/></TD>
+</TR>
+<TR>
+	<TH>Friendly ID</TH><TD><INPUT type="text" id="field_friendly_id"/></TD>
+</TR>
+<TR>
+	<TH>Require Message Type</TH>
+	<TD><INPUT type="checkbox" id="require_message_type"></TD>
+<TR>
+	<TH>Delivery URL Mask</TH><TD><INPUT type="text" id="field_mask" value="*"/></TD>
+</TR>
+<TR>
+	<TH>Realm</TH><TD><INPUT type="text" id="field_realm" value="*"/></TD>
+</TR>
+<TR>
+	<TH>Secret Key</TH><TD><INPUT type="text" id="field_secret_key"/></TD>
+</TR>
+</TABLE>
+
+<H3>Tags Required on Create</H3>
+<TABLE>
+<TR>
+	<TH>Tag</TH>
+	<TH>Value</TH>
+</TR>
+<TR>
+	<TD><INPUT id="tag_name" type="text"/></TD>
+	<TD><INPUT id="tag_value" type="text"/></TD>
+</TABLE>
+<BUTTON onclick="add_tag()">Add</BUTTON>
+
+<H3>Existing Required Tags</H3>
+<TABLE id="tag_table" border="1">
+<TR>
+	<TH>Action</TH><TH>Tag</TH><TH>Value</TH>
+</TR>
+</TABLE>
+
+</BODY>

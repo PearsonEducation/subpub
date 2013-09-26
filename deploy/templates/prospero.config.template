@@ -1,0 +1,37 @@
+[{prospero, [
+    {startup, [
+        {bootstrap, $BOOTSTRAP_VALUE}
+      ]},
+    {audit, [
+        {log_path, "$AUDIT_LOG_PATH"},
+        {include_payload, false}
+      ]},
+    {delivery, [
+        {max_failed_attempts, $MAX_DELIVERY_ATTEMPTS},
+        {callback_timeout, $CALLBACK_TIMEOUT_MILLIS},
+        {ibrowse_max_sessions, 1000},
+        {ibrowse_max_pipeline_size, 1000},
+        {rampdown_multiplier, 1.05},
+        {rampdown_interval_seconds, 2},
+        {rampdown_wait_milliseconds, 500}
+      ]},
+    {amqp, [
+        {reconnect_wait_millis, 2000},
+        {consumer_prefetch_count, 3},
+        {confirmed_publishing, false},
+        {brokers, [
+            $BROKERS_SECTION
+          ]}
+      ]},
+    {rest, [
+        {port, $REST_PORT},
+        {enable_test_services, $REST_ENABLE_TEST_SERVICES},
+        {secure_error_messages, $REST_SECURE_AUTH_MESSAGES},
+        {status, serverout},
+        {server_nickname, "$REST_SERVER_NICKNAME"}
+      ]},
+    {auth, [
+        {token_date_threshold_milliseconds, 3600000}
+      ]}
+  ]}
+].

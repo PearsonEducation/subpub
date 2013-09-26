@@ -1,0 +1,2 @@
+<tags exported="$exported$" version="$version$">
+$map tag_template tags$</tags>

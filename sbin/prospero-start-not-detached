@@ -1,0 +1,5 @@
+#!/bin/sh
+
+NOT_DETACHED="true"
+
+. "`dirname $0`/prospero-start"

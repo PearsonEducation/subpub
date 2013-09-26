@@ -1,0 +1,21 @@
+#!/bin/sh
+
+. "`dirname $0`/../deploy/scripts/always_included.sh"
+
+ORIG_PATH=`pwd`
+cd `dirname $0`
+cd ..
+
+if [ "x" = "x$1" ]
+then
+  HOSTNAME=`hostname`
+  FQDN=`hostname -f`
+  PNODE=prospero@$FQDN
+  echo "Prospero node name not specified, defaulting to $PNODE\n"
+else
+  PNODE=$1
+fi
+
+erl -pa ebin -name serverin -setcookie "${PROSPERO_ERLANG_COOKIE}" -noinput -hidden -eval "pe_remote:rest_server_in('$PNODE')"
+
+cd $ORIG_PATH

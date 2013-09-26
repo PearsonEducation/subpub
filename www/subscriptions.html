@@ -1,0 +1,206 @@
+<HEAD>
+<SCRIPT>
+
+function getParameterByName(name)
+{
+    name = name.replace(/[\[]/, "\\\[").replace(/[\]]/, "\\\]");
+	var regex = new RegExp("[\\?&]" + name + "=([^&#]*)"), results = regex.exec(location.search);
+	return results == null ? "" : decodeURIComponent(results[1].replace(/\+/g, " "));
+}
+
+function load_all_subscriptions_cb(xhr)
+{
+	if (xhr.readyState == 4)
+	{
+		if (xhr.status == 200)
+		{
+			var result = JSON.parse(xhr.responseText);
+			sort_subscriptions(result);
+			populate_table(result);
+		}
+		else
+		{
+			alert("Error, status = " + xhr.status + ", " + xhr.responseText);
+		}
+	}
+}
+
+function load_all_subscriptions()
+{
+	var xhr = new window.XMLHttpRequest;
+	xhr.open("GET", "/v1/subscriptions", true);
+	xhr.onreadystatechange = function() {
+		load_all_subscriptions_cb(xhr);
+	};
+	xhr.send();
+}
+
+function filter_by_principal(principal, subscriptions)
+{
+	var index;
+	var output = new Array();
+
+	for (index in subscriptions)
+	{
+		var sub = subscriptions[index];
+		if (sub.principal_id == principal)
+		{
+			output.push(sub);
+		}
+	}
+
+	return output;
+}
+
+function populate_table(subscriptions)
+{
+	var principal = getParameterByName("PRINCIPAL");
+	if (principal != "")
+	{
+		subscriptions = filter_by_principal(principal, subscriptions);
+	}
+
+	var table = document.getElementById("subscriptions");
+	for (sub in subscriptions)
+	{
+		create_row(table, subscriptions[sub]);
+	}
+}
+
+
+function get_message_type(subscription)
+{
+	for (index in subscription.tags)
+	{
+		var tag = subscription.tags[index];
+		
+		if (tag.type == "MessageType")
+		{
+			return tag.value
+		} 
+	} 
+
+	return "unknown";
+}
+
+
+function create_button(text)
+{
+	var button = document.createElement("button");
+	var textNode = document.createTextNode(text);
+	button.appendChild(textNode);
+
+	return button;
+}
+
+function do_delete_subscription_cb(xhr)
+{
+	if (xhr.readyState == 4)
+	{
+		window.location = "subscriptions.html";
+	}
+}
+
+function do_delete_subscription(id)
+{
+	var xhr = new window.XMLHttpRequest;
+	xhr.open("DELETE", "/v1/subscription/" + id, true);
+	xhr.onreadystatechange = function() {
+		do_delete_subscription_cb(xhr);
+	};
+	xhr.send();
+}
+
+
+function delete_subscription(id)
+{
+	if (confirm("Delete " + id))
+	{
+		do_delete_subscription(id)
+	}
+}
+
+function view_subscription(id)
+{
+	window.location = "/file/view_subscription.html?id=" + id;
+}
+
+function create_row(table, subscription)
+{
+	var messageType = get_message_type(subscription);
+	var row = table.insertRow(-1);
+	var cell = row.insertCell(-1);
+
+	var button = create_button("Delete");
+	button.onclick = function () {
+		delete_subscription(subscription.id);
+	};
+	cell.appendChild(button);
+
+	var button = create_button("View");
+	button.onclick = function () {
+		view_subscription(subscription.id);
+	}
+	cell.appendChild(button);
+
+	cell = row.insertCell(-1);
+	cell.innerHTML = subscription.id;
+
+	cell = row.insertCell(-1);
+	cell.innerHTML = get_message_type(subscription);
+
+	cell = row.insertCell(-1);
+	cell.innerHTML = subscription.callback_url;
+}
+
+
+function goback()
+{
+	window.history.back();
+}
+
+function sort_subscriptions(subscriptions)
+{
+	var compare = function (a,b)
+	{
+		if (get_message_type(a) > get_message_type(b))
+		{
+			return 1;
+		}
+		else if (get_message_type(a) < get_message_type(b))
+		{
+			return -1;
+		}
+		else
+		{
+			return 0;
+		}
+	}
+
+	subscriptions.sort(compare);
+}
+
+function create_subscription()
+{
+	window.location = "create_subscription.html";
+}
+
+load_all_subscriptions();
+
+</SCRIPT>
+</HEAD>
+<BODY>
+<H3>Subscriptions</H3>
+<BUTTON onclick="goback()">Back</BUTTON>
+<BUTTON onclick="create_subscription()">Create</BUTTON>
+<P>
+<TABLE id="subscriptions" border="1">
+<TR id="first_row">
+	<TH>Action</TH>
+	<TH>ID</TH>
+	<TH>Message Type</TH>
+	<TH>Callback</TH>
+</TR>
+</TABLE>
+</P>
+</BODY>

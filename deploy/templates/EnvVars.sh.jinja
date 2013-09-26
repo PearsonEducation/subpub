@@ -1,0 +1,12 @@
+#!/bin/sh
+
+BOOTSTRAP_VALUE=[\'prospero@prospero01sc.ecollegeqa.net\',\'prospero@prospero02sc.ecollegeqa.net\',\'prospero@prospero03sc.ecollegeqa.net\'],
+LOG_PATH={{ logPath }}
+MAX_DELIVERY_ATTEMPTS={{ maxDeliveryAttempts }}
+CALLBACK_TIMEOUT_MILLIS=10000
+
+PROSPERO_ERLANG_COOKIE={{ cookie }}
+PROSPERO_MNESIA_DIR_BASE={{ dataPath }}
+
+FQDN=`hostname -f`
+

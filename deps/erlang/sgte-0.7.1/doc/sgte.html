@@ -1,0 +1,171 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>Module sgte</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module sgte</h1>
+<ul class="index"><li><a href="#types">Data Types</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+
+
+<h2><a name="types">Data Types</a></h2>
+
+<h3 class="typedecl"><a name="type-compiled">compiled()</a></h3>
+<p><tt>compiled() = [char() | <a href="#type-token">token()</a>]</tt>
+<ul class="definitions"><li><tt><a name="type-token">token()</a> = <a href="#type-tupe">tupe()</a></tt></li>
+</ul></p>
+
+
+<h3 class="typedecl"><a name="type-data">data()</a></h3>
+<p><tt>data() = [tuple()] | <a href="#type-dict">dict()</a></tt></p>
+
+
+<h3 class="typedecl"><a name="type-domain">domain()</a></h3>
+<p><tt>domain() = string()</tt></p>
+<p>The name of the .po file to write.
+ </p>
+
+<h3 class="typedecl"><a name="type-gettext_tuple">gettext_tuple()</a></h3>
+<p><tt>gettext_tuple() = {Key, LineNo}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-options">options()</a></h3>
+<p><tt>options() = [<a href="#type-option">option()</a>]</tt>
+<ul class="definitions"><li><tt><a name="type-option">option()</a> = quiet | {gettext_lc, string()}</tt></li>
+</ul></p>
+
+
+<h3 class="typedecl"><a name="type-src_files">src_files()</a></h3>
+<p><tt>src_files() = [string()]</tt></p>
+<p>Source files to parse for gettext strings.
+ </p>
+
+<h3 class="typedecl"><a name="type-target_dir">target_dir()</a></h3>
+<p><tt>target_dir() = string()</tt></p>
+<p>Dir where the .pot file will be written
+ </p>
+
+<h3 class="typedecl"><a name="type-template">template()</a></h3>
+<p><tt>template() = string() | binary()</tt></p>
+<p>Template to compile (string or binary)</p>
+
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#compile-1">compile/1</a></td><td>Compiles the template string T and returns the compiled
+  template or an error.</td></tr>
+<tr><td valign="top"><a href="#compile_file-1">compile_file/1</a></td><td>Compiles the template file FileName and returns the compiled
+  template or an error.</td></tr>
+<tr><td valign="top"><a href="#gettext_init-1">gettext_init/1</a></td><td>Creates the gettext template file (.pot).</td></tr>
+<tr><td valign="top"><a href="#gettext_init-2">gettext_init/2</a></td><td>Creates the gettext template file (.pot).</td></tr>
+<tr><td valign="top"><a href="#gettext_init-3">gettext_init/3</a></td><td>Creates the gettext template file (.pot).</td></tr>
+<tr><td valign="top"><a href="#gettext_strings-1">gettext_strings/1</a></td><td>Extracts from template T the list of gettext keys
+  with associated line numbers.</td></tr>
+<tr><td valign="top"><a href="#rec_to_kv-2">rec_to_kv/2</a></td><td>TODO: write doc.</td></tr>
+<tr><td valign="top"><a href="#rec_to_name_kv-2">rec_to_name_kv/2</a></td><td>TODO: write doc.</td></tr>
+<tr><td valign="top"><a href="#render-2">render/2</a></td><td>Renders the compiled template.</td></tr>
+<tr><td valign="top"><a href="#render-3">render/3</a></td><td>Renders the compiled template.</td></tr>
+<tr><td valign="top"><a href="#render_bin-2">render_bin/2</a></td><td>Calls render/2 and converts the result to binary.</td></tr>
+<tr><td valign="top"><a href="#render_bin-3">render_bin/3</a></td><td>Calls render/3 and converts the result to binary.</td></tr>
+<tr><td valign="top"><a href="#render_str-2">render_str/2</a></td><td>Calls render/2 and converts the result to string.</td></tr>
+<tr><td valign="top"><a href="#render_str-3">render_str/3</a></td><td>Renders the template converting the result to string.</td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="compile-1">compile/1</a></h3>
+<div class="spec">
+<p><tt>compile(T::<a href="#type-template">template()</a>) -&gt; {ok, C::<a href="#type-compiled">compiled()</a>} | {error, Reason}</tt></p>
+</div><p>Compiles the template string T and returns the compiled
+  template or an error.</p>
+
+<h3 class="function"><a name="compile_file-1">compile_file/1</a></h3>
+<div class="spec">
+<p><tt>compile_file(FileName) -&gt; {ok, C::<a href="#type-compiled">compiled()</a>} | {error, Reason}</tt></p>
+</div><p>Compiles the template file FileName and returns the compiled
+  template or an error.</p>
+
+<h3 class="function"><a name="gettext_init-1">gettext_init/1</a></h3>
+<div class="spec">
+<p><tt>gettext_init(SrcFiles::<a href="#type-src_files">src_files()</a>) -&gt; ok | {error, Reason}</tt></p>
+</div><p>Creates the gettext template file (.pot).
+  SrcFiles is the list of files to be parsed for gettext strings.
+  Each gettext string found will be written to the .pot file.
+  The default name of the generated file will be messages.pot.</p>
+
+<h3 class="function"><a name="gettext_init-2">gettext_init/2</a></h3>
+<div class="spec">
+<p><tt>gettext_init(TargetDir::<a href="#type-target_dir">target_dir()</a>, SrcFiles::<a href="#type-src_files">src_files()</a>) -&gt; ok | {error, Reason}</tt></p>
+</div><p>Creates the gettext template file (.pot).
+  TargetDir is the directory where the file will be created.
+  If TargetDir doesn't exists it will be created.
+  SrcFiles is the list of files to be parsed for gettext strings.
+  Each gettext string found will be written to the .pot file.
+  The file name of the generated file will be messages.pot.</p>
+
+<h3 class="function"><a name="gettext_init-3">gettext_init/3</a></h3>
+<div class="spec">
+<p><tt>gettext_init(TargetDir::<a href="#type-target_dir">target_dir()</a>, SrcFiles::<a href="#type-src_files">src_files()</a>, Domain::<a href="#type-domain">domain()</a>) -&gt; ok | {error, Reason}</tt></p>
+</div><p>Creates the gettext template file (.pot).
+  TargetDir is the directory where the file will be created.
+  If TargetDir doesn't exists it will be created.
+  SrcFiles is the list of files to be parsed for gettext strings.
+  Each gettext string found will be written to the .pot file.
+  Domain (when present) is the name of the file to generate.
+  If no Domain is defined the default name will be messages.pot.</p>
+
+<h3 class="function"><a name="gettext_strings-1">gettext_strings/1</a></h3>
+<div class="spec">
+<p><tt>gettext_strings(T::<a href="#type-template">template()</a>) -&gt; [<a href="#type-gettext_tuple">gettext_tuple()</a>]</tt></p>
+</div><p>Extracts from template T the list of gettext keys
+  with associated line numbers.
+  This is a utility function to use in cojunction with gettext
+  to create initial .po files.</p>
+
+<h3 class="function"><a name="rec_to_kv-2">rec_to_kv/2</a></h3>
+<div class="spec">
+<p><tt>rec_to_kv(RecordTuple, Keys::[atom()]) -&gt; <a href="#type-sgte_record">sgte_record()</a> | {error, not_enough_keys} | {error, too_much_keys}</tt></p>
+</div><p>TODO: write doc</p>
+
+<h3 class="function"><a name="rec_to_name_kv-2">rec_to_name_kv/2</a></h3>
+<div class="spec">
+<p><tt>rec_to_name_kv(RecordTuple, Keys::[atom()]) -&gt; <a href="#type-sgte_record">sgte_record()</a> | {error, not_enough_keys} | {error, too_much_keys}</tt></p>
+</div><p>TODO: write doc</p>
+
+<h3 class="function"><a name="render-2">render/2</a></h3>
+<div class="spec">
+<p><tt>render(Compiled::<a href="#type-compiled">compiled()</a>, Data::<a href="#type-data">data()</a>) -&gt; string()</tt></p>
+</div><p>Renders the compiled template.</p>
+
+<h3 class="function"><a name="render-3">render/3</a></h3>
+<div class="spec">
+<p><tt>render(C::<a href="#type-compiled">compiled()</a>, Data::<a href="#type-data">data()</a>, Options::<a href="#type-options">options()</a>) -&gt; string()</tt></p>
+</div><p>Renders the compiled template.</p>
+
+<h3 class="function"><a name="render_bin-2">render_bin/2</a></h3>
+<div class="spec">
+<p><tt>render_bin(Compiled::<a href="#type-compiled">compiled()</a>, Data::<a href="#type-data">data()</a>) -&gt; binary()</tt></p>
+</div><p>Calls render/2 and converts the result to binary.</p>
+
+<h3 class="function"><a name="render_bin-3">render_bin/3</a></h3>
+<div class="spec">
+<p><tt>render_bin(Compiled::<a href="#type-compiled">compiled()</a>, Data::<a href="#type-data">data()</a>, Options::<a href="#type-options">options()</a>) -&gt; binary()</tt></p>
+</div><p>Calls render/3 and converts the result to binary.</p>
+
+<h3 class="function"><a name="render_str-2">render_str/2</a></h3>
+<div class="spec">
+<p><tt>render_str(Compiled::<a href="#type-compiled">compiled()</a>, Data::<a href="#type-data">data()</a>) -&gt; string()</tt></p>
+</div><p>Calls render/2 and converts the result to string.</p>
+
+<h3 class="function"><a name="render_str-3">render_str/3</a></h3>
+<div class="spec">
+<p><tt>render_str(Compiled::<a href="#type-compiled">compiled()</a>, Data::<a href="#type-data">data()</a>, Options::<a href="#type-options">options()</a>) -&gt; string()</tt></p>
+</div><p>Renders the template converting the result to string.</p>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc, Jan 20 2008, 18:33:33.</i></p>
+</body>
+</html>

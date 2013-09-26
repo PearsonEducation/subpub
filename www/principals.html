@@ -1,0 +1,278 @@
+<HEAD>
+<SCRIPT>
+
+var subscriptions;
+var principals
+
+function load_all_subscriptions_cb(xhr)
+{
+	if (xhr.readyState == 4)
+	{
+		subscriptions = JSON.parse(xhr.responseText);
+		populate_table(principals);
+	}
+}
+
+function load_all_subscriptions()
+{
+	var xhr = new window.XMLHttpRequest;
+	xhr.open("GET", "/v1/subscriptions", true);
+	xhr.onreadystatechange = function() {
+		load_all_subscriptions_cb(xhr);
+	};
+	xhr.send();
+}
+
+function load_all_principals()
+{
+	var table = document.getElementById("principals");
+	var oRows = table.getElementsByTagName('tr');
+	var iRowCount = oRows.length;
+
+	for (i = 1; i < iRowCount; i++)
+	{
+		table.deleteRow(1);
+	}
+
+	var xhr = new window.XMLHttpRequest;
+	xhr.open("GET", "/v1/principals", true);
+	xhr.onreadystatechange = function() {
+		load_all_principals_cb(xhr);
+	}; 
+	xhr.send();
+}
+
+function load_all_principals_cb(xhr)
+{
+	if (xhr.readyState == 4)
+	{
+		principals = JSON.parse(xhr.responseText);
+		// populate_table(result);
+		load_all_subscriptions();
+	}
+}
+
+function populate_table(principals)
+{
+	sort_principals(principals);
+	var table = document.getElementById("principals");
+	for (index in principals)
+	{
+		create_row(table, principals[index]);
+	}
+}
+
+
+function create_button(text)
+{
+	var button = document.createElement("button");
+	var textNode = document.createTextNode(text);
+	button.appendChild(textNode);
+
+	return button;
+}
+
+
+function deactivate_principal(id)
+{
+	if (confirm("Deactivate " + id))
+	{
+		deactivate(id);
+	}
+}
+
+function activate_principal_cb(xhr)
+{
+	if (xhr.readyState == 4)
+	{
+		load_all_principals();	
+	}
+}
+
+function activate_principal(id)
+{
+	var url = "/v1/principal/" + id;
+
+	var xhr = new window.XMLHttpRequest;
+	xhr.open("POST", url, true);
+	xhr.onreadystatechange = function() {
+		activate_principal_cb(xhr);
+	}; 
+	xhr.send();
+}
+
+function deactivate_cb(xhr)
+{
+	if (xhr.readyState == 4)
+	{
+		load_all_principals();	
+	}
+}
+
+function deactivate(id)
+{
+	var url = "/v1/principal/" + id;
+	var xhr = new window.XMLHttpRequest;
+	xhr.open("DELETE", url, true);
+	xhr.onreadystatechange = function() {
+		deactivate_cb(xhr);
+	}; 
+	xhr.send();
+}
+
+function view_subscriptions(principal_id)
+{
+	var url = "subscriptions.html?PRINCIPAL=" + principal_id;
+	window.location = url;
+}
+
+function build_view_subscriptions_button(principal_id)
+{
+	var index;
+	var count = 0;
+	var element = document.createTextNode("None");
+
+	for (index in subscriptions)
+	{
+		if (principal_id == subscriptions[index].principal_id)
+		{
+			count++;
+		}
+	}
+
+	if (count > 0)
+	{
+		element = create_button("View (" + count + ")");
+		element.onclick = function() {
+			view_subscriptions(principal_id);
+		};
+	}
+
+	return element;
+}
+
+function do_delete_principal_cb(xhr)
+{
+	if (xhr.readyState == 4)
+	{
+		window.location.reload(true);
+	}
+}
+
+function do_delete_principal(id)
+{
+	var url = "/v1/principal/" + id;
+	var xhr = new window.XMLHttpRequest;
+	xhr.open("DELETE", url, true);
+	xhr.onreadystatechange = function() {
+		do_delete_principal_cb(xhr);
+	};
+	xhr.send();
+}
+
+function delete_principal(principal_id)
+{
+	if (confirm("Delete principal " + principal_id))
+	{
+		do_delete_principal(principal_id);
+	}
+}
+
+function create_row(table, principal)
+{
+	var row = table.insertRow(-1);
+	var cell = row.insertCell(-1);
+	var button;
+
+	button = create_button("View");
+	button.onclick = function () {
+		view_principal(principal.id);
+	}
+	cell.appendChild(button);
+
+	button = create_button("Delete");
+	button.onclick = function () {
+		delete_principal(principal.id);
+	}
+	cell.appendChild(button);
+
+	cell = row.insertCell(-1);
+	cell.innerHTML = principal.id;
+
+	cell = row.insertCell(-1);
+	cell.innerHTML = principal.date_created;
+
+	cell = row.insertCell(-1);
+	cell.innerHTML = principal.delivery_url_mask;
+
+	cell = row.insertCell(-1);
+	cell.innerHTML = principal.realm
+
+	cell = row.insertCell(-1);
+	cell.appendChild(build_view_subscriptions_button(principal.id));
+}
+
+
+function view_principal (id)
+{
+	window.location = "view_principal.html?ID=" + id;
+}
+
+function go_back()
+{
+	window.location = "prospero.html";
+}
+
+
+function create_principal()
+{
+	window.location = "create_principal.html";
+}
+
+function sort_principals(principals)
+{
+	var compare = function (a,b)
+	{
+		if (a.id > b.id)
+		{
+			return 1;
+		}
+		else if (a.id < b.id)
+		{
+			return -1;
+		}
+		else
+		{
+			return 0;
+		}
+	}
+
+	principals.sort(compare);
+}
+
+</SCRIPT>
+</HEAD>
+<BODY>
+<H2>Principals</H2>
+
+<P>
+<BUTTON onclick="go_back()">Back</BUTTON>
+<BUTTON onclick="create_principal()">New</BUTTON>
+</P>
+
+<TABLE id="principals" border="1">
+<TR id="first_row">
+	<TH>Action</TH>
+	<TH>ID</TH>
+	<TH>Created</TH>
+	<TH>Mask</TH>
+	<TH>Realm</TH>
+	<TH>Subscriptions</TH>
+</TR>
+</TABLE>
+
+<SCRIPT>
+load_all_principals()
+</SCRIPT>
+
+</BODY>

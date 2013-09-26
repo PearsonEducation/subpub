@@ -1,0 +1,73 @@
+[{prospero, [
+    {startup, [
+        {bootstrap, {{ bootstrap }} }
+    ]},
+    {audit, [
+        {log_path, "{{ auditLogPath}}" },
+        {include_payload, false}
+    ]},
+    {delivery, [
+        {number_of_workers, 4000},
+        {max_failed_attempts,        {{ maxFailedAttempts}}},
+        {callback_timeout,           {{ callbackTimeoutMillis }}},
+        {ibrowse_max_sessions,       4000},
+        {ibrowse_max_pipeline_size,  1000},
+        {rampdown_multiplier,        1.05},
+        {rampdown_interval_seconds,  2},
+        {rampdown_wait_milliseconds, 500}
+    ]},
+    {amqp, [
+        {reconnect_wait_millis,     2000},
+        {consumer_prefetch_count,   3},
+        {confirmed_publishing,      false},
+        {brokers, [
+            {%- for broker in brokers %}
+            { "{{ broker.name }}", [
+                { exchange,     "prospero" },
+                { host,         "{{ broker.host }}" },
+                { port,         5672 },
+                { virtual_host, "/" },
+                { username,     "{{ broker.username }}" },
+                { password,     "{{ broker.password }}" },
+                { heartbeat_milliseconds, 1000 }
+            ]}{%- if not loop.last %},{% endif %}
+            {%- endfor %}
+        ]}
+    ]},
+    {rest, [
+        {port,                  {{ rest.port }}},
+        {enable_test_services,  {{ rest.enableTestServices }} },
+        {secure_error_messages, {{ rest.secureAuthMessages }}},
+        {status,                serverout},
+        {server_nickname,       "{{ rest.serverNickname }}"}
+    ]},
+	{admin, [
+		%
+		% port the admin functionality listens on
+		%
+		{port, 4779},
+
+		% 
+		% PEM file used to validate signatures
+		%
+		{public_key, "misc/public.pem"},
+
+		%
+		% PEM file used to create signatures
+		%
+		{private_key, "misc/private.pem"},
+
+		%
+		% number of milliseconds that a token is good for
+		%
+		{token_threshold, 3600000}
+	]},
+    {auth, [
+        {token_date_threshold_milliseconds, 3600000}
+    ]},
+    {stats, [
+        {host, "localhost"},
+        {port, 8125}
+      ]}
+  ]}
+].

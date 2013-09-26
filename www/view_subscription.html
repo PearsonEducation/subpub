@@ -1,0 +1,143 @@
+<HEAD>
+<SCRIPT>
+
+function getParameterByName(name)
+{
+    name = name.replace(/[\[]/, "\\\[").replace(/[\]]/, "\\\]");
+	var regex = new RegExp("[\\?&]" + name + "=([^&#]*)"), results = regex.exec(location.search);
+	return results == null ? "" : decodeURIComponent(results[1].replace(/\+/g, " "));
+}
+
+function load_subscription_cb(xhr)
+{
+	if (xhr.readyState == 4)
+	{
+		var result = JSON.parse(xhr.responseText);
+		populate_fields(result);
+	}
+}
+
+function add_row(table, name, value)
+{
+	var row = table.insertRow(-1);
+	var cell;
+
+	cell = row.insertCell(-1);
+	cell.innerHTML = "<B>" + name + "</B>";
+
+	cell = row.insertCell(-1);
+	cell.innerHTML = value;
+}
+
+function populate_fields(subscription)
+{
+	var table = document.getElementById("subscription");
+	var row, cell;
+
+	add_row(table, "ID", 				subscription.id);
+	add_row(table, "queue Name", 		subscription.queue_name);
+	add_row(table, "Principal", 		subscription.principal_id);
+	add_row(table, "WSDL URI", 			subscription.wsdl_uri);
+	add_row(table, "Date Created",		subscription.date_created);
+	add_row(table, "Date Cancelled",	subscription.date_cancelled);
+	add_row(table, "Callback URL",		subscription.callback_url);
+
+	table = document.getElementById("tag_table");
+
+	for (index in subscription.tags)
+	{
+		var tag = subscription.tags[index];
+
+		add_row(table, tag.type, tag.value);
+	}
+}
+
+function load_subscription()
+{
+	var id = getParameterByName("id");
+	var xhr = new window.XMLHttpRequest;
+	xhr.open("GET", "/v1/subscription/" + id, true);
+	xhr.onreadystatechange = function() {
+		load_subscription_cb(xhr);
+	};
+	xhr.send();
+}
+
+function do_delete_subscription_cb(xhr)
+{
+	if (xhr.readyState == 4)
+	{
+		window.location = "subscriptions.html";
+	}
+}
+
+function do_delete_subscription()
+{
+	var id = getParameterByName("id");
+	var xhr = new window.XMLHttpRequest;
+	xhr.open("DELETE", "/v1/subscription/" + id, true);
+	xhr.onreadystatechange = function() {
+		do_delete_subscription_cb(xhr);
+	};
+	xhr.send();
+}
+
+function get_message_type(subscription)
+{
+	for (index in subscription.tags)
+	{
+		var tag = subscription.tags[index].tag;
+		
+		if (tag.type == "MessageType")
+		{
+			return tag.value
+		} 
+	} 
+
+	return "unknown";
+}
+
+
+function create_button(text)
+{
+	var button = document.createElement("button");
+	var textNode = document.createTextNode(text);
+	button.appendChild(textNode);
+
+	return button;
+}
+
+
+function delete_subscription()
+{
+	var id = getParameterByName("id");
+	var response = confirm("Delete Subscription?");
+	if (response)
+	{
+		do_delete_subscription();
+	}
+}
+
+function back ()
+{
+	window.history.back();
+}
+
+load_subscription();
+
+</SCRIPT>
+</HEAD>
+<BODY>
+
+<H3>Subscription</H3>
+<TABLE id="subscription" border="1">
+</TABLE>
+
+<H3>Tags</H3>
+<TABLE id="tag_table" border="1">
+</TABLE>
+
+<P>
+<BUTTON onclick="back()">Back</BUTTON>
+<BUTTON onclick="delete_subscription()">Delete</BUTTON>
+</BODY>

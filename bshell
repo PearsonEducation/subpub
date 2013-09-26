@@ -1,0 +1,4 @@
+#!/bin/sh
+
+./rebar compile
+erl -env ERL_MAX_PORTS 5000 -pa ebin -boot start_sasl -config devb -name b -setcookie COOKIE -s pe_app go

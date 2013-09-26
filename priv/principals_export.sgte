@@ -1,0 +1,2 @@
+<principals exported="$exported$" version="$version$">
+$map principal_template principals$</principals>

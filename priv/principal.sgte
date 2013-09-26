@@ -1,0 +1,10 @@
+  <principal id="$id$">
+    <friendly_name>$friendly_name$</friendly_name>
+    <is_require_message_type_with_new_subs>$is_require_message_type_with_new_subs$</is_require_message_type_with_new_subs>
+    <tags>
+$map tag_template tags$    </tags>
+    <date_created>$date_created$</date_created>
+    <date_deactivated>$date_deactivated$</date_deactivated>
+    <secret>$secret$</secret>
+    <realm>$realm$</realm>
+  </principal>

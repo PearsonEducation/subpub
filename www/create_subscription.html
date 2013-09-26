@@ -1,0 +1,201 @@
+<HEAD>
+<SCRIPT>
+
+function fields_are_valid()
+{
+	var el;
+
+	el = document.getElementById("field_principal");
+	if (el.value == "")
+	{
+		alert ("Please supply a principal ID");
+		return false;
+	}
+
+	el = document.getElementById("field_callback");
+	if (el.value == "")
+	{
+		alert ("Please supply a callback URL");
+		return false;
+	}
+
+	el = document.getElementById("field_client");
+	if (el.value == "")
+	{
+		alert ("Please supply a value for client");
+		return false;
+	}
+
+	el = document.getElementById("field_client_string");
+	if (el.value == "")
+	{
+		alert ("Please supply a value for client string");
+		return false;
+	}
+
+	el = document.getElementById("field_message_type");
+	if (el.value == "")
+	{
+		alert ("Please supply a message type");
+		return false;
+	}
+
+	el = document.getElementById("field_system");
+	if (el.value == "")
+	{
+		alert ("Please supply a value for system");
+		return false;
+	}
+
+	el = document.getElementById("field_sub_system");
+	if (el.value == "")
+	{
+		alert ("Please supply a value for subsystem");
+		return false;
+	}
+
+	return true;
+}
+
+// "{ "principal":{
+//      "id":"FOUR",
+//      "friendly_name":"Four",
+//      "enforced_tag_ids":[
+//           {"tag":{
+//               "id":"Client:Four",
+//               "type":"Client",
+//               "value":"Four"
+//           }}
+//      ],
+//      "date_created":"2013-05-10T19:49:20Z",
+//      "date_deactivated":"",
+//      "realm":"*",
+//      "delivery_url_mask":"*.eclg.org"
+// }}
+
+function send_create_request_cb(xhr)
+{
+	if (xhr.readyState == 4)
+	{
+		if (xhr.status == 200)
+		{
+			go_back();
+		}
+		else
+		{
+			alert("Error, " + xhr.status + ", " + xhr.responseText);
+		}
+	}
+}
+
+function send_create_request()
+{
+	var subscription = new Object();
+	subscription.principal_id = document.getElementById("field_principal").value;
+	subscription.callback_url = document.getElementById("field_callback").value
+
+	var tags = new Array();
+	var value;
+
+	value = document.getElementById("field_client").value;
+	tags[0] = { 
+		id:    "Client:" + value,
+		type:  "Client",
+		value: value
+	};
+
+	value = document.getElementById("field_client_string").value;
+	tags[1] = { 
+		id:    "ClientString:" + value,
+		type:  "ClientString",
+		value: value
+	};
+
+	value = document.getElementById("field_message_type").value;
+	tags[2] = { 
+		id:    "MessageType:" + value,
+		type:  "MessageType",
+		value: value
+	};
+
+	value = document.getElementById("field_system").value;
+	tags[3] = { 
+		id:    "System:" + value,
+		type:  "System",
+		value: value
+	};
+
+	value = document.getElementById("field_sub_system").value;
+	tags[4] = { 
+		id:    "SubSystem:" + value,
+		type:  "SubSystem",
+		value: value
+	};
+
+	subscription.tags = tags;
+
+	var text = JSON.stringify(subscription);
+
+	var xhr = new window.XMLHttpRequest;
+	xhr.open("POST", "/v1/subscription", true);
+	xhr.onreadystatechange = function() {
+		send_create_request_cb(xhr);
+	}; 
+	xhr.send(text);
+}
+
+
+function create_subscription()
+{
+	if (fields_are_valid())
+	{
+		send_create_request();
+	}
+}
+
+function cancel()
+{
+	window.location.replace(window.history.back());
+}
+
+</SCRIPT>
+</HEAD>
+<BODY>
+<H2>Create Subscription</H2>
+<P>
+<BUTTON onclick="cancel()">Cancel</BUTTON>
+<BUTTON onclick="create_subscription()">Create</BUTTON>
+</P>
+
+<TABLE id="subscription" border="1">
+<TR>
+	<TH>Principal</TH>
+	<TD><INPUT type="text" size="60" id="field_principal"/></TD>
+</TR>
+<TR>
+	<TH>Callback</TH>
+	<TD><INPUT type="text" size="60" id="field_callback"/></TD>
+</TR>
+<TR>
+	<TH>Client</TH>
+	<TD><INPUT type="text" size="60" id="field_client"/></TD>
+</TR>
+<TR>
+	<TH>Client String</TH>
+	<TD><INPUT type="text" size="60" id="field_client_string"/></TD>
+</TR>
+<TR>
+	<TH>Message Type</TH>
+	<TD><INPUT type="text" size="60" id="field_message_type"/></TD>
+</TR>
+<TR>
+	<TH>System</TH>
+	<TD><INPUT type="text" size="60" id="field_system"/></TD>
+</TR>
+<TR>
+	<TH>Subsystem</TH>
+	<TD><INPUT type="text" size="60" id="field_sub_system"/></TD>
+</TR>
+</TABLE>
+
+</BODY>

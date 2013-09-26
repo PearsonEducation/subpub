@@ -1,0 +1,149 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>sgte - A simple Erlang Template Engine
+</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<h1>sgte - A simple Erlang Template Engine
+</h1>
+<p>Copyright © 2006 - 2008 S.G. Consulting
+</p>
+<p><b>Authors:</b> Filippo Pacini (<a href="mailto:filippo.pacini@gmail.com"><tt>filippo.pacini@gmail.com</tt></a>).</p>
+
+<p><em>sgte</em> is a library implementing a Template Engine. 
+The template system is inspired on <a href="http://www.stringtemplate.org">String Template</a>
+</p><p>
+The template source can be a string or binary or a filename. 
+The use of the engine is as simple as (from the command line):
+<pre>
+&gt; {ok, Compiled} = sgte:compile(TmplStr),
+&gt; sgte:render(Compiled, Data).
+
+or:
+
+&gt; {ok, Compiled} = sgte:compile_file(FileName),
+&gt; sgte:render(Compiled, Data).
+</pre>
+
+When compile/1 or compile_file/1 are called, the template is "compiled" 
+to an internal representation made of mixed binaries and erlang terms.
+
+Then one of the render functions (render, render_str, or render_bin) 
+can be called passing the Data to be rendered in the template.
+<ul>
+    <li>render/2 and render/3 returns a deep iolist() suitable e.g. to use in yaws</li>
+    <li>render_str/2 and render_str/3 returns a string()</li>
+    <li>render_bin/2 and render_bin/3 returns a list of binaries()</li>
+</ul>
+
+In the rest of the overview the template features will be described using render_str since
+the produced is easier to read.
+</p>
+<p>
+Data can be a Dict or a proplist (e.g. [{attr1, Val1}, {attr2, Val2}])
+Values can be a simple value or a function/1. In this case the function is 
+called with Data as an argument.
+</p>
+
+<h3>Template Features</h3>
+<h4>Attribute reference</h4>
+Attribute reference is written as: 
+<pre>
+$name$
+</pre> Here is an example:
+<pre>
+&gt; {ok, C} = sgte:compile("Hello $name$!").
+&gt; sgte:render_str(C, [{name, "Filippo").
+"Hello Filippo!"
+</pre>
+You can also use attribute references to access nested structures. Eg.:
+<pre>
+&gt; {ok, C} = sgte:compile("$foo.bar.baz$").
+&gt; sgte:render_str(C, [{foo, [{bar, [{baz, "a string"}]}]}]).
+"a string"
+</pre>
+
+<h4>Template reference</h4>
+<pre>
+$include tmpl$
+</pre> Includes an external compiled template. Eg.:
+<pre>
+&gt; {ok, C1} = sgte:compile("foo").
+&gt; {ok, C2} = sgte:compile("$include t1$ bar").
+&gt; sgte:render_str(C2, [{t1, C1}]).
+"foo bar"
+</pre>
+
+<h4>Application of an attribute to another</h4>
+<pre>
+$apply myFun aVar$
+</pre><p> When the first attribute is callable you get the
+result of myFun(aVar). Otherwhise the result is the value of
+myFun.</p>
+
+<h4>Conditional evaluation</h4> 
+  <pre>
+  $if title$
+      &lt;h1&gt;$title$&lt;/h1&gt;
+  $else$
+      &lt;h1&gt;default title&lt;/h1&gt;
+  $end if$
+  </pre>
+
+<h4>Template application to a list of elements</h4>
+if names is a list [{username, "foo"}, {username, "bar"}]
+<pre>
+$map li names$
+</pre>
+map li template to names. Each element in names is passed to the template with name attr.
+If li is the template: 
+<pre>
+&lt;li&gt;&lt;b&gt;$username$&lt;/b&gt;&lt;/li&gt;</pre>
+We get the result:
+<pre>
+&lt;li&gt;&lt;b&gt;foo&lt;/b&gt;&lt;/li&gt;&lt;li&gt;&lt;b&gt;bar&lt;/b&gt;&lt;/li&gt;
+</pre>
+
+In the shell we write something like:
+<pre>
+&gt; {ok, LI} = sgte:compile("&lt;li&gt;&lt;b&gt;$username$&lt;/b&gt;&lt;/li&gt;").
+&gt; {ok, NamesC} = sgte:compile("$map li names$").
+&gt; sgte:render_str(NamesC, [{li, LI}, {names, [{username, "foo"}, {username, "bar"}]}]).
+&lt;li&gt;&lt;b&gt;foo&lt;/b&gt;&lt;/li&gt;&lt;li&gt;&lt;b&gt;bar&lt;/b&gt;&lt;/li&gt;
+</pre>
+
+Another way to express the same template inline all in one step is:
+<pre>
+$map:{&lt;li&gt;&lt;b&gt;$username$&lt;/b&gt;&lt;/li&gt;} names$
+</pre>
+<h4>Join of items using a separator</h4>
+<pre>
+&gt; {ok, SEL} = sgte:compile("SELECT $join:{,} columns$ FROM $table$;").
+&gt; sgte:render_str(SEL, [{table, "myTable"}, {columns, ["col1", "col2", "col3"]}]).
+"SELECT col1,col2,col3 FROM myTable;"
+</pre>
+
+<h4>Internationalization support using gettext</h4>
+Gettext is a package that can be found in <a href="http://jungerl.sourceforge.net/">jungerl</a>. It 
+supports internationalization using the <a href="http://www.gnu.org/software/gettext/">GNU Gettext format</a>.
+<pre>
+$txt:{Hello World}$
+</pre>
+Here's an example supposing you already have started gettext and you have the .po files containing
+translated strings:
+<pre>
+&gt; {ok, C} = sgte:compile("$txt:{Hello World}$"),
+&gt; sgte:render(C, [{options, [{gettext_lc, "en"}]}]).
+"Hello World"
+&gt; sgte:render(C, [{options, [{gettext_lc, "it"}]}]).
+"Ciao Mondo"
+</pre>
+
+<hr>
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc, Jan 20 2008, 18:33:34.</i></p>
+</body>
+</html>

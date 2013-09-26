@@ -1,0 +1,9 @@
+            {"$KEY", [
+                    {exchange, "$AMQP_EXCHANGE"},
+                    {host, "$AMQP_HOST"},
+                    {port, $AMQP_PORT},
+                    {virtual_host, "$AMQP_VIRTUAL_HOST"},
+                    {username, "$AMQP_USERNAME"},
+                    {password, "$AMQP_PASSWORD"},
+                    {heartbeat_milliseconds, $AMQP_HEARTBEAT_MILLIS}
+              ]}

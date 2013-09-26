@@ -1,0 +1,5 @@
+#!/bin/sh
+
+export ERL_LIBS="$ERL_LIBS:`dirname $0`/deps/erlang"
+./rebar compile
+erl -K true +P 10000 -env ERL_MAX_PORTS 10000 -pa ebin -boot start_sasl -config dev -name prospero -setcookie COOKIE -s pe_app go

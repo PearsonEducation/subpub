@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src/java/FakeProspero"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="lib" path="lib/RestExpress/DateAdapterJ-1.0.0.jar"/>
+	<classpathentry kind="lib" path="lib/RestExpress/gson-1.4.jar"/>
+	<classpathentry kind="lib" path="lib/RestExpress/junit-4.4.jar"/>
+	<classpathentry kind="lib" path="lib/RestExpress/netty-3.2.1.Final.jar"/>
+	<classpathentry kind="lib" path="lib/RestExpress/RestExpress-0.5.1.jar"/>
+	<classpathentry kind="lib" path="lib/RestExpress/xpp3_min-1.1.4c.jar"/>
+	<classpathentry kind="lib" path="lib/RestExpress/xstream-1.3.1.jar"/>
+	<classpathentry kind="lib" path="/home/chrisch/work/prosperlang/examples/DemonSpawn/lib/Camel/optional/log4j-1.2.16.jar"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>

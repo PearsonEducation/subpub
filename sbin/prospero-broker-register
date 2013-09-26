@@ -1,0 +1,86 @@
+#!/bin/sh
+
+. "`dirname $0`/../deploy/scripts/always_included.sh"
+
+ORIG_PATH=`pwd`
+cd `dirname $0`
+cd ..
+
+ME=`basename $0`
+
+
+RKEY=$1
+RHOST=$2
+RPORT=$3
+RVIRTUAL_HOST=$4
+REXCHANGE=$5
+RUSERNAME=$6
+RPASSWORD=$7
+RHEARTBEAT_MILLIS=$8
+HOST=$9
+
+USAGE="Usage: $ME Key Host Port VirtualHost Exchange Username Password HeartbeatMillis ProsperoNode"
+
+if [ "x" = "x$RKEY" ]
+then
+  echo "Please specify the Key\n$USAGE"
+  exit 1
+fi
+
+if [ "x" = "x$RHOST" ]
+then
+  echo "Please specify the Host\n$USAGE"
+  exit 1
+fi
+
+if [ "x" = "x$RPORT" ]
+then
+  echo "Please specify the Port\n$USAGE"
+  exit 1
+fi
+
+if [ "x" = "x$RVIRTUAL_HOST" ]
+then
+  echo "Please specify the Virtual Host\n$USAGE"
+  exit 1
+fi
+
+if [ "x" = "x$REXCHANGE" ]
+then
+  echo "Please specify the Exchange\n$USAGE"
+  exit 1
+fi
+
+if [ "x" = "x$RUSERNAME" ]
+then
+  echo "Please specify the Username\n$USAGE"
+  exit 1
+fi
+
+if [ "x" = "x$RPASSWORD" ]
+then
+  echo "Please specify the Password\n$USAGE"
+  exit 1
+fi
+
+if [ "x" = "x$RHEARTBEAT_MILLIS" ]
+then
+  echo "Please specify the Heartbeat in Milliseconds\n$USAGE"
+  exit 1
+fi
+
+
+if [ "x" = "x$HOST" ]
+then
+  #HOSTNAME=`hostname`
+  #FQDN=`hostname -f`
+  PNODE=prospero@$FQDN
+  echo "Prospero node name not specified, defaulting to $PNODE\n"
+else
+  PNODE=$HOST
+fi
+
+
+erl -pa ebin -name rotate -setcookie "${PROSPERO_ERLANG_COOKIE}" -noinput -hidden -eval "pe_remote:register_broker('$PNODE',\"$RKEY\",\"$RHOST\",$RPORT,\"$RVIRTUAL_HOST\",\"$REXCHANGE\",\"$RUSERNAME\",\"$RPASSWORD\",$RHEARTBEAT_MILLIS)."
+
+cd $ORIG_PATH

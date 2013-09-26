@@ -1,0 +1,4 @@
+#!/bin/sh
+
+export ERL_LIBS="$ERL_LIBS:`dirname $0`/deps/erlang"
+./rebar compile

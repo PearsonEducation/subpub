@@ -1,0 +1,10 @@
+#!/bin/sh
+
+./rebar clean
+rm -fR tmp
+rm -f test/*.beam
+rm -fR Mnesia.*
+rm -fR audit.log
+rm -vfR dist
+rm -f *.beam
+rm -f *.dump

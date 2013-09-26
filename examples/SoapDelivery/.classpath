@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="lib" path="/home/chrisch/work/prosperlang/examples/SoapDelivery/lib/commons-logging-1.1.1.jar"/>
+	<classpathentry kind="lib" path="/home/chrisch/work/prosperlang/examples/SoapDelivery/lib/cxf-2.2.9.jar"/>
+	<classpathentry kind="lib" path="/home/chrisch/work/prosperlang/examples/SoapDelivery/lib/geronimo-activation_1.1_spec-1.0.2.jar"/>
+	<classpathentry kind="lib" path="/home/chrisch/work/prosperlang/examples/SoapDelivery/lib/geronimo-annotation_1.0_spec-1.1.1.jar"/>
+	<classpathentry kind="lib" path="/home/chrisch/work/prosperlang/examples/SoapDelivery/lib/geronimo-javamail_1.4_spec-1.6.jar"/>
+	<classpathentry kind="lib" path="/home/chrisch/work/prosperlang/examples/SoapDelivery/lib/geronimo-jaxws_2.1_spec-1.0.jar"/>
+	<classpathentry kind="lib" path="/home/chrisch/work/prosperlang/examples/SoapDelivery/lib/geronimo-jms_1.1_spec-1.1.1.jar"/>
+	<classpathentry kind="lib" path="/home/chrisch/work/prosperlang/examples/SoapDelivery/lib/geronimo-servlet_2.5_spec-1.2.jar"/>
+	<classpathentry kind="lib" path="/home/chrisch/work/prosperlang/examples/SoapDelivery/lib/geronimo-stax-api_1.0_spec-1.0.1.jar"/>
+	<classpathentry kind="lib" path="/home/chrisch/work/prosperlang/examples/SoapDelivery/lib/geronimo-ws-metadata_2.0_spec-1.1.2.jar"/>
+	<classpathentry kind="lib" path="/home/chrisch/work/prosperlang/examples/SoapDelivery/lib/jaxb-api-2.1.jar"/>
+	<classpathentry kind="lib" path="/home/chrisch/work/prosperlang/examples/SoapDelivery/lib/jaxb-impl-2.1.13.jar"/>
+	<classpathentry kind="lib" path="/home/chrisch/work/prosperlang/examples/SoapDelivery/lib/jetty-6.1.21.jar"/>
+	<classpathentry kind="lib" path="/home/chrisch/work/prosperlang/examples/SoapDelivery/lib/jetty-util-6.1.21.jar"/>
+	<classpathentry kind="lib" path="/home/chrisch/work/prosperlang/examples/SoapDelivery/lib/neethi-2.0.4.jar"/>
+	<classpathentry kind="lib" path="/home/chrisch/work/prosperlang/examples/SoapDelivery/lib/saaj-api-1.3.jar"/>
+	<classpathentry kind="lib" path="/home/chrisch/work/prosperlang/examples/SoapDelivery/lib/saaj-impl-1.3.2.jar"/>
+	<classpathentry kind="lib" path="/home/chrisch/work/prosperlang/examples/SoapDelivery/lib/wsdl4j-1.6.2.jar"/>
+	<classpathentry kind="lib" path="/home/chrisch/work/prosperlang/examples/SoapDelivery/lib/wstx-asl-3.2.9.jar"/>
+	<classpathentry kind="lib" path="/home/chrisch/work/prosperlang/examples/SoapDelivery/lib/xml-resolver-1.2.jar"/>
+	<classpathentry kind="lib" path="/home/chrisch/work/prosperlang/examples/SoapDelivery/lib/XmlSchema-1.4.5.jar"/>
+	<classpathentry kind="lib" path="/home/chrisch/work/prosperlang/examples/SoapDelivery/lib/commons-codec-1.4.jar"/>
+	<classpathentry kind="lib" path="/home/chrisch/work/prosperlang/examples/SoapDelivery/lib/mysql-connector-java-5.1.13-bin.jar"/>
+	<classpathentry kind="lib" path="/home/chrisch/work/prosperlang/examples/SoapDelivery/lib/commons-cli-1.2.jar"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>
