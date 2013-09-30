@@ -1,6 +1,6 @@
 Overview
 ========
-True to it's name, subpub is a system-to-system messaging solution designed to be a "black box", hiding as much
+True to it's name, SubPub is a system-to-system messaging solution designed to be a "black box", hiding as much
 as possible the complexity inherent in messaging.  It's design goals are:
 
 1. Interoperability
@@ -8,7 +8,7 @@ as possible the complexity inherent in messaging.  It's design goals are:
 3. Standard messaging stereotype (Pub/Sub, Request/Reply)
 4. "Always On" architecture
 
-In short, events are published into subpub to which multiple consumers may subscribe to, for which SubPub
+In short, events are published into SubPub to which multiple consumers may subscribe to, for which SubPub
 guarantees *at least once* delivery.
 SubPub services wrap two sides (publishing and delivery) of the RabbitMQ AMQP messaging broker.
 On the front-end/publishing side is an HTTP RESTful endpoint that allows a Principal to manage subscriptions
@@ -61,7 +61,7 @@ Building
 
 Running locally
 ---------------
-Ensure that RabbitMQ is running locally and can accept connections from Prosper.io.  Typically, you start via:
+Ensure that RabbitMQ is running locally and can accept connections from subpub.  Typically, you start via:
 
     rabbitmq-server
 
@@ -98,3 +98,7 @@ It should show something like this:
           "down_nodes": []
        }
     }
+
+License
+=======
+Licensed under Apache 2.0. See [LICENSE](https://github.com/PearsonEducation/subpub/blob/master/LICENSE) file.
