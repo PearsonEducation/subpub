@@ -33,6 +33,9 @@ start_application([]) ->
 get_apps_to_start("R13" ++ _Revision) ->
   [crypto, ssl, inets, ibrowse];
 
+get_apps_to_start("R16" ++ _Revision) ->
+  [crypto, asn1, public_key, ssl, inets, ibrowse];
+
 get_apps_to_start(_Revision) ->
   [crypto, public_key, ssl, inets, ibrowse].
 
