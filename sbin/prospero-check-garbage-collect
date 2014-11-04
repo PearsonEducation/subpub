@@ -1,0 +1,26 @@
+#!/bin/sh
+
+. "`dirname $0`/../deploy/scripts/always_included.sh"
+
+ORIG_PATH=`pwd`
+cd `dirname $0`
+cd ..
+
+ME=`basename $0`
+
+HOST=$1
+
+USAGE="Usage: $ME ProsperoNode"
+
+if [ "x" = "x$1" ]
+then
+  FQDN=`hostname -f`
+  PNODE=prospero@$FQDN
+  echo "Prospero node name not specified, defaulting to $PNODE\n"
+else
+  PNODE=$1
+fi
+
+erl -pa ebin -name rotate -setcookie COOKIE -noinput -hidden -eval "pe_remote:check_garbage_collect('$PNODE')"
+
+cd $ORIG_PATH

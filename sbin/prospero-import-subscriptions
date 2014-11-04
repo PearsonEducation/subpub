@@ -1,0 +1,36 @@
+#!/bin/sh
+
+. "`dirname $0`/../deploy/scripts/always_included.sh"
+
+ORIG_PATH=`pwd`
+cd `dirname $0`
+cd ..
+
+ME=`basename $0`
+
+FILE=$1
+HOST=$2
+
+USAGE="Usage: $ME file HOST"
+
+if [ "x" = "x$FILE" ]
+then
+	echo "Please specify the import file\n$USAGE"
+	exit 1
+fi
+
+if [ "x" = "x$HOST" ]
+then
+	HOSTNAME=`hostname`
+	FQDN=`hostname -f`
+	PNODE=prospero@$FQDN
+	echo "Prospero node name not specified, defaulting to $PNODE\n"
+else
+	PNODE=$HOST
+fi
+
+
+
+erl -pa ebin -name rotate -setcookie "${PROSPERO_ERLANG_COOKIE}" -noinput -hidden -eval "pe_remote:import_subscriptions('$PNODE',\"$FILE\")."
+
+cd $ORIG_PATH

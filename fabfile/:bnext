@@ -1,0 +1,5 @@
+This fabric script has several options and commands. Listed below is each task and what you can expect from them.
+
+setupErlang()
+
+* This task will simply install Erlang 15B (The recommended minimum version for running SubPub). The packages to be installed were determined  
