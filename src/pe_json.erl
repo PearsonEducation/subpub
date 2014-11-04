@@ -8,9 +8,12 @@
 
 -export([
 	decode_principal/1,
-	encode_principal/1,
-	encode_principal_list/1,
 	decode_subscription/1,
+	encode_principal/2,
+	encode_principal_list/2,
+	encode_registry/3,
+	encode_registry_keys/1,
+	encode_registry_contents/1,
 	encode_subscription/1,
 	encode_subscription_list/1
 ]).
@@ -55,12 +58,14 @@ decode_principal (JSON) ->
 	Secret = binary_to_list(proplists:get_value(<<"secret">>, PrincipalProps)),
 	Tags = proplists:get_value(<<"enforced_tags">>, PrincipalProps),
 	EnforcedTags = decode_tags(Tags),
+	DurableMessagingEnabled = proplists:get_value(<<"durable_messaging_enabled">>, PrincipalProps, false),
 	#pe_principal{
 		id 					= Id, 
 		friendly_name 		= FriendlyName, 
 		is_require_message_type_with_new_subs = RequireMessageType,
 		realm 				= Realm,
 		delivery_url_mask 	= Mask,
+		durable_messaging_enabled = DurableMessagingEnabled,
 		secret 				= Secret,
 		enforced_tag_ids	= EnforcedTags
 	}.
@@ -81,7 +86,7 @@ encode_one_tag(Tag) ->
 		{value,bin(Tag#pe_tag.value)}
 	]}.
 
-encode_principal(Principal) ->
+encode_principal(Principal, IncludeSecret) ->
 	{struct, [
 		{ id, bin(Principal#pe_principal.id) },
 		{ friendly_name, bin(Principal#pe_principal.friendly_name) },
@@ -91,13 +96,20 @@ encode_principal(Principal) ->
 		{ date_deactivated, bin(pe_time:format_8601(Principal#pe_principal.date_deactivated)) },
 		{ realm, bin(Principal#pe_principal.realm) },
 		{ delivery_url_mask, bin(Principal#pe_principal.delivery_url_mask) },
-		{ secret, bin(Principal#pe_principal.secret) }
+		{ 
+			secret, 
+			case IncludeSecret of
+				true -> bin(Principal#pe_principal.secret);
+				_ -> bin("")
+			end
+		},
+		{ durable_messaging_enabled, Principal#pe_principal.durable_messaging_enabled }
 	]}.
 
-encode_principal_list(Principals) ->
+encode_principal_list(Principals, IncludeSecret) ->
 	lists:map (
 		fun(Principal) ->
-			encode_principal(Principal)
+			encode_principal(Principal, IncludeSecret)
 		end,
 		Principals
 	).
@@ -144,3 +156,64 @@ encode_subscription_list(Subscriptions) ->
 		Subscriptions
 	).
 
+encode_registry(Dictionary, StartTime, UpTime) ->
+	{struct, [
+		{startTime, StartTime},
+		{upTime, UpTime},
+		{messages, encode_registry_entries(Dictionary)}
+	]}.
+
+encode_registry_entries(Dictionary) ->
+	lists:map(
+		fun(Key) ->
+			Value = dict:fetch(Key, Dictionary),
+			encode_registry_message(Value)
+		end,
+		dict:fetch_keys(Dictionary)
+	).
+
+encode_registry_message (Message) ->
+	{struct, [
+		{key, encode_message_key(Message#registry_message.key)},
+		{totalBytes, Message#registry_message.totalBytes},
+		{totalMessages, Message#registry_message.totalMessages},
+		{content, bin(Message#registry_message.content)}
+	]}.
+
+encode_message_key(MessageKey) ->
+	{struct, [
+		{client, bin(MessageKey#message_key.client)},
+		{clientString, bin(MessageKey#message_key.clientString)},
+		{messageType, bin(MessageKey#message_key.messageType)},
+		{system, bin(MessageKey#message_key.system)},
+		{subSystem, bin(MessageKey#message_key.subSystem)}
+	]}.
+
+encode_registry_key(Key) ->
+	{struct, [
+		{key, bin(Key)}
+	]}.
+
+encode_registry_keys(Keys) ->
+	lists:map(
+		fun(Key) ->
+			encode_registry_key(Key)
+		end,
+		Keys
+	).
+
+encode_registry_entry(Tuple) ->
+	[ Key, Value ] = tuple_to_list(Tuple),
+	{struct, [
+		{key, bin(Key)},
+		{value, bin(Value)}
+	]}.
+		
+
+encode_registry_contents(Contents) ->
+	lists:map(
+		fun(Entry) ->
+			encode_registry_entry(Entry)
+		end,
+		Contents
+	).

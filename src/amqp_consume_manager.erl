@@ -184,6 +184,7 @@ handle_cast(Msg, State) ->
 	error_logger:info_msg("amqp_consume_manager: Unknown handle_cast: ~p~n",[Msg]),
 	{noreply, State}.
 
+
 handle_info({disconnected,{pid, BrokerPid}}, State) ->
 	case proplists:get_value(BrokerPid, State#acm_state.conns_by_broker_pid, undefined) of
 		undefined ->
@@ -217,6 +218,7 @@ handle_info({disconnected,{key, Key},{pid, BrokerPid}}, #acm_state{brokers=Broke
 		conns_by_broker_pid = proplists:delete(BrokerPid, State#acm_state.conns_by_broker_pid)
 	}};
 
+
 handle_info({connected,{key, Key},{pid, BrokerPid}}, #acm_state{watched_subs=WatchedSubs} = State) ->
 	error_logger:info_msg("amqp_consume_manager: Connection for broker pid ~p is connected~n",[BrokerPid]),
 	{ok, {Key, SubId}} = amqp_managed_connection:get_dog_tag(BrokerPid),
@@ -229,14 +231,23 @@ handle_info({connected,{key, Key},{pid, BrokerPid}}, #acm_state{watched_subs=Wat
 				{found, _Sub} ->
 					case pe_principal_store:lookup(pe_sub:get(principal_id, Subscription)) of
 						{found, Principal} ->
-							PrincipalReam = pe_principal:get(realm, Principal),
-							PrincipalSecret = pe_principal:get(secret, Principal),
+							try
+								PrincipalReam = pe_principal:get(realm, Principal),
+								PrincipalSecret = pe_principal:get(secret, Principal),
 
-							amqp_managed_connection:declare_queue(BrokerPid, pe_sub:get(queue_name, Subscription), pe_sub:get(tags, Subscription)),
-							amqp_managed_connection:consume_queue(BrokerPid, pe_sub:get(queue_name, Subscription), PrincipalReam, pe_sub:get(id, Subscription), PrincipalSecret),
+								amqp_managed_connection:declare_queue(BrokerPid, pe_sub:get(queue_name, Subscription), pe_sub:get(tags, Subscription)),
+								amqp_managed_connection:consume_queue(BrokerPid, pe_sub:get(queue_name, Subscription), PrincipalReam, pe_sub:get(id, Subscription), PrincipalSecret),
 
-							NewConnsByBrokerPid = [{BrokerPid, {Key, SubId}}|proplists:delete(BrokerPid, State#acm_state.conns_by_broker_pid)],
-							State#acm_state{conns_by_broker_pid=NewConnsByBrokerPid};
+								[{BrokerPid, {Key, SubId}}|proplists:delete(BrokerPid, State#acm_state.conns_by_broker_pid)]
+							of
+								NewConnsByBrokerPid -> 
+									State#acm_state{conns_by_broker_pid=NewConnsByBrokerPid}
+							catch 
+								_ : Exception -> 
+									error_logger:error_msg("amqp_consume_manager: Exception during declare/consume: ~p~n", [Exception]),
+									State
+							end;
+
 						none ->
 							error_logger:error_msg("amqp_consume_manager:  Cannot consume queue for subscription: Principal not found: ~p~n",[Subscription]),
 							amqp_managed_connection:close(BrokerPid),

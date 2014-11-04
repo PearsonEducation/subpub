@@ -9,12 +9,18 @@
 -export([
   activate_principal/2,
   broker_status/1,
+  check_garbage_collect/1,
   consume_from_broker/2,
-  create_principal/8,
+  create_principal/9,
   create_subscription/5,
   deactivate_principal/2,
   delete_subscription/2,
+  export_principals/2,
+  export_subscriptions/2,
   find_subscribers/2,
+  garbage_collect/1,
+  import_principals/2,
+  import_subscriptions/2,
   migrate/1,
   print_principal/2,
   print_subscription/2,
@@ -32,7 +38,8 @@
   stop_all_sub_monitors/1,
   stop_consuming_from_broker/2,
   stop_publishing_to_broker/2,
-  stop_subscription/2
+  stop_subscription/2,
+  upgrade_principal_schema/1
 ]).
   
 reset_logs(Node, SaslLogFile) ->
@@ -109,10 +116,10 @@ start_subscription(Node, Id) ->
   io:format('done.~n'),
   halt(ReturnVal).
 
-create_principal(Node, Id, FriendlyName, TagsString, IsMessageTypeRequiredForSubscription, Secret, Realm, DeliveryUrlMask) ->
+create_principal(Node, Id, FriendlyName, TagsString, IsMessageTypeRequiredForSubscription, Secret, Realm, DeliveryUrlMask, DurableMessagingEnabled) ->
   ReturnVal = case pe_tag_util:parse_tags_string(TagsString) of
     {ok, Tags} ->
-      case rpc:call(Node,pe_principal_intake,accept,[Id, FriendlyName, Tags, IsMessageTypeRequiredForSubscription, Secret, Realm, DeliveryUrlMask]) of
+      case rpc:call(Node,pe_principal_intake,accept,[Id, FriendlyName, Tags, IsMessageTypeRequiredForSubscription, Secret, Realm, DeliveryUrlMask, DurableMessagingEnabled]) of
         {ok,Principal} ->
           io:format("Created Principal:~n~p~n",[Principal]),
           0;
@@ -386,3 +393,41 @@ print_all_principals(Node) ->
 	end,
 	io:format('done.~n'),
 	halt(ReturnVal).
+
+%
+% run garbage collection
+%
+garbage_collect(Node) ->
+	ok = rpc:call(Node, pe_collect, collect, []),
+	io:format("done.~n", []),
+	halt().
+
+check_garbage_collect(Node) ->
+	ok = rpc:call(Node, pe_collect, check, []),
+	io:format("done.~n", []),
+	halt().
+
+export_principals(Node, File) ->
+	ok = rpc:call(Node, pe_export, export_principals, [File]),
+	io:format("done.~n", []),
+	halt().
+
+export_subscriptions(Node, File) ->
+	ok = rpc:call(Node, pe_export, export_subscriptions, [File]),
+	io:format("done.~n", []),
+	halt().
+
+import_principals(Node, File) ->
+	ok = rpc:call(Node, pe_import, import_principals, [File]),
+	io:format("done.~n", []),
+	halt().
+
+import_subscriptions(Node, File) ->
+	ok = rpc:call(Node, pe_import, import_subscriptions, [File]),
+	io:format("done.~n", []),
+	halt().
+
+upgrade_principal_schema(Node) ->
+	ok = rpc:call(Node, pe_migrate, migrate_record_schema, []),
+	io:format("done.~n", []),
+	halt().

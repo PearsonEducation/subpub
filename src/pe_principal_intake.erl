@@ -11,7 +11,7 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
  
 -export([
-	accept/7, 
+	accept/8, 
 	activate/1, 
 	deactivate/1, 
 	start_link/0
@@ -21,8 +21,8 @@
  
 start_link() -> gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
-accept(PrincipalId, FriendlyName, EnforcedTags, RequireMessageTypeWithSubscription, Secret, Realm, DeliveryUrlMask) ->
-  gen_server:call(?MODULE, {new, PrincipalId, FriendlyName, EnforcedTags, RequireMessageTypeWithSubscription, Secret, Realm, DeliveryUrlMask}).
+accept(PrincipalId, FriendlyName, EnforcedTags, RequireMessageTypeWithSubscription, Secret, Realm, DeliveryUrlMask, DurableMessagingEnabled) ->
+  gen_server:call(?MODULE, {new, PrincipalId, FriendlyName, EnforcedTags, RequireMessageTypeWithSubscription, Secret, Realm, DeliveryUrlMask, DurableMessagingEnabled}).
   
 deactivate({id, PrincipalId}) ->
   {found, Principal} = pe_principal_store:lookup(PrincipalId),
@@ -64,7 +64,7 @@ principal_exists(PrincipalId) ->
       true
   end.
 
-handle_call({new, PrincipalId, FriendlyName, EnforcedTags, RequireMessageTypeWithSubscription, Secret, Realm, DeliveryUrlMask}, _From, _State) ->
+handle_call({new, PrincipalId, FriendlyName, EnforcedTags, RequireMessageTypeWithSubscription, Secret, Realm, DeliveryUrlMask, DurableMessagingEnabled}, _From, _State) ->
   TagRecords = pe_tag_util:instances(EnforcedTags),
 
   AssignedSecret = create_secret_or_use_provided(Secret),
@@ -72,11 +72,11 @@ handle_call({new, PrincipalId, FriendlyName, EnforcedTags, RequireMessageTypeWit
   Result = case principal_exists(PrincipalId) of
     false ->
       {created, Principal} = pe_principal_store:create_new(
-        pe_principal:instance(PrincipalId, FriendlyName, pe_tag_util:get_tag_ids(TagRecords), RequireMessageTypeWithSubscription, AssignedSecret, undefined, Realm, DeliveryUrlMask)
+        pe_principal:instance(PrincipalId, FriendlyName, pe_tag_util:get_tag_ids(TagRecords), RequireMessageTypeWithSubscription, AssignedSecret, undefined, Realm, DeliveryUrlMask, DurableMessagingEnabled)
       ),
   
       Tmp2 = pe_tag_util:make_tag_audit_log_tags(TagRecords),
-      Tmp3 = [{principal,PrincipalId},{friendly_name, FriendlyName},{is_require_message_type_with_new_subs, RequireMessageTypeWithSubscription},{realm, Realm}],
+      Tmp3 = [{principal,PrincipalId},{friendly_name, FriendlyName},{is_require_message_type_with_new_subs, RequireMessageTypeWithSubscription},{durable_messaging_enabled, DurableMessagingEnabled},{realm, Realm}],
       
       pe_audit:log(lists:append(Tmp3,Tmp2),"PRINCIPAL"),
 

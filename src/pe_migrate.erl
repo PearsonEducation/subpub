@@ -7,7 +7,7 @@
 
 -module(pe_migrate).
 
--export([migrate/0, get_schema/0, set_version/0, get_db_version/0]).
+-export([migrate/0, get_schema/0, set_version/0, get_db_version/0, migrate_record_schema/0]).
 
 -include("include/prospero.hrl").
 
@@ -109,3 +109,33 @@ set_version() ->
 set_version(Version) ->
   mnesia:dirty_write(pe_properties, #pe_kvpair{key=version, value=Version}). 
 
+migrate_record_schema() ->
+	MigrationFun = fun({
+				pe_principal,
+				Id,
+				FriendlyName,
+				EnforcedTagIds,
+				IsRequireMessageTypeWithNewSubs,
+				DateCreated,
+				DateDeactivated,
+				Secret,
+				Realm,
+				DeliveryUrlMask
+			}) ->
+				{
+                                pe_principal,
+                                Id,
+                                FriendlyName,
+                                EnforcedTagIds,
+                                IsRequireMessageTypeWithNewSubs,
+                                DateCreated,
+                                DateDeactivated,
+                                Secret,
+                                Realm,
+                                DeliveryUrlMask,
+                                false
+				}
+			end,
+				
+	{atomic, ok} = mnesia:transform_table(pe_principal, MigrationFun, record_info(fields, pe_principal)),
+  ok.

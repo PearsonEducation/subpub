@@ -31,14 +31,11 @@ start_application([]) ->
   ok.
   
 get_apps_to_start("R13" ++ _Revision) ->
-  [crypto, ssl, inets, ibrowse];
-
+  [crypto, ssl, inets, ibrowse, lexical_uuid];
 get_apps_to_start("R16" ++ _Revision) ->
-  [crypto, asn1, public_key, ssl, inets, ibrowse];
-
+  [crypto, asn1, public_key, ssl, inets, ibrowse,lexical_uuid];
 get_apps_to_start(_Revision) ->
-  [crypto, public_key, ssl, inets, ibrowse].
-
+  [crypto, asn1, public_key, ssl, inets, ibrowse,lexical_uuid].
 
 start(_Type, _StartArgs) ->
   case start_application( get_apps_to_start(erlang:system_info(otp_release)) ) of

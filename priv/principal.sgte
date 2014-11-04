@@ -7,4 +7,6 @@ $map tag_template tags$    </tags>
     <date_deactivated>$date_deactivated$</date_deactivated>
     <secret>$secret$</secret>
     <realm>$realm$</realm>
+    <delivery_url_mask>$delivery_url_mask$</delivery_url_mask>
+    <durable_messaging_enabled>$durable_messaging_enabled$</durable_messaging_enabled>
   </principal>

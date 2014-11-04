@@ -1,9 +1,3 @@
-% SubPub -  Copyright (c) 2013 Pearson.  All rights reserved.  
-%
-%   Licensed under the Apache License, Version 2.0 (the "License");
-%
-%   you may not use this file except in compliance with the License.
-
 -module(pe_admin).
 
 -export([start_link/0]).
@@ -53,43 +47,15 @@
 % section of the configuration file.  The config values and their meanings 
 % are:
 % 
-%     file_path --- the path, relative to where the program is started, 
-%     that the program will look for files that it serves.  Note that this
-%     is only for URLs relative to "/file".  
-%
-%	  Thus if the value for this parameter is "www" and the request URL is
-%	  "/file/foo.html" then the program will look for the file "www/foo.html"
-%
-%     passwd --- the file, relative to where the system is started, where 
-%     the "password file" can be found.  
-%
 %     port --- the port that the system listens to for admin requests.  This
 %     defaults to 8080 if no other value is given.
 %
 %     public_key --- the file containing the public key, in PEM format, 
 %     that the system should use when trying to authenticate a user.
 %
-%     private_key --- if the system is acting as its own authorization server,
-%     then this value is the file that contains the private key in PEM 
-%     format that should be used to create signatures.
-%
 %     token_threshold --- the window of time that a token is considered 
 %     valid.
 % 
-% PASSWD FILE
-%
-% The module uses a password file to help manage security.  The file contains
-% one line for each user in the system.  Each line has the format:
-%
-%     <name>:<description>:<digest>
-%
-% Where "name" should be a string that uniquely identifies the user in 
-% the system.  "description" is an arbitrary text description of the user.
-% "digest" is a SHA1 digest of the user's password.
-%
-% If the system is also acting as the authentication server, then entries are
-% used to authenticate users.
-%
 % SERVICES
 %
 % The following services are available via this module:
@@ -97,9 +63,9 @@
 % /subscriptions --- return a JSON list of all the subscriptions in the system.
 %     All users can access this service.
 %
-% /subscription --- create a new subscription in the system.  The service expects
-%     a JSON subscription in the body of the request.  Only super and write users
-%     can use this service.
+% /subscription, HTTP POST --- create a new subscription in the system.  The
+%     service expects a JSON subscription in the body of the request.  Only
+%     super and write users can use this service.
 %
 % /subscription/<ID>, HTTP GET --- get information about a subscription.  The
 %     service returns a JSON subscription in the body of the response.  All users
@@ -129,9 +95,7 @@
 % /principal/<ID>/deactivate --- deactivate a principal.  Only super and write
 %     users can access this service.
 %
-% /registry/keys --- list the registry keys 
-%
-% /registry/contents --- list contents of the registry
+% /registry --- list contents of the registry
 %
 % JSON
 % 
@@ -206,8 +170,8 @@ start_link() ->
 			Val -> Val
 		catch
 			_ErrorType:Error ->
-			error_logger:error_msg("Unable to complete Request: ~p~n~nRequest Dump:~n~p~n~nStack Trace:~n~p~n", [Error,Req:dump(),erlang:get_stacktrace()]),
-			send_response(Req, #pe_rest_response{status=500, content_type="text/plain", body=io_lib:format("A problem occurred: ~p",[Error])})
+				error_logger:error_msg("Unable to complete Request: ~p~n~nRequest Dump:~n~p~n~nStack Trace:~n~p~n", [Error,Req:dump(),erlang:get_stacktrace()]),
+				send_response(Req, #pe_rest_response{status=500, content_type="text/plain", body=io_lib:format("A problem occurred: ~p",[Error])})
 		end
 	end,
 
@@ -420,7 +384,7 @@ do_handle_request(Req, PathPrefix) ->
 		[PathPrefix, "principals"] ->
 			case Req:get(method) of
 				'GET' ->
-					send_response(Req, handle_list_principals());
+					send_response(Req, handle_list_principals(Req));
 				_ ->
 					send_response(Req, #pe_rest_response{status=405, body="Method Not Allowed"})
 			end;
@@ -456,12 +420,30 @@ do_handle_request(Req, PathPrefix) ->
 			end;
 
 		[PathPrefix, "principal", Id, "deactivate"] ->
-			send_response(Req, handle_deactivate_principal(Id));
-
+			case Req:get(method) of
+				'POST' ->
+					case authorize(Req, ["super", "write"]) of
+						false ->
+							send_response(Req, #pe_rest_response{status=401, body="User is not authorized to deactivate principals"});
+						_ ->
+							send_response(Req, handle_deactivate_principal(Id))
+					end;
+				_ ->
+					send_response(Req, #pe_rest_response{status=405, body="Method Not Allowed"})
+			end;
 		[PathPrefix, "principal", Id, "activate"] ->
-			send_response(Req, handle_activate_principal(Id));
-
-		[PathPrefix, "registry", "contents" ] ->
+			case Req:get(method) of
+				'POST' ->
+					case authorize(Req, ["super", "write"]) of
+						false ->
+							send_response(Req, #pe_rest_response{status=401, body="User is not authorized to re-activate principals"});
+						_ ->
+							send_response(Req, handle_activate_principal(Id))
+					end;
+				_ ->
+					send_response(Req, #pe_rest_response{status=405, body="Method Not Allowed"})
+			end;
+		[PathPrefix, "registry"] ->
 			case Req:get(method) of
 				'GET' ->
 					send_response(Req, handle_registry_contents());
@@ -470,26 +452,6 @@ do_handle_request(Req, PathPrefix) ->
 					send_response(Req, #pe_rest_response{status=405, body="Method Not Allowed"})
 			end;
 
-		["file", "create_principal.html" ] ->
-			handle_file_request (Req, "/file");
-
-		["file", "create_subscription.html" ] ->
-			handle_file_request (Req, "/file");
-
-		["file", "principals.html" ] ->
-			handle_file_request (Req, "/file");
-
-		["file", "prospero.html" ] ->
-			handle_file_request (Req, "/file");
-
-		["file", "subscriptions.html" ] ->
-			handle_file_request (Req, "/file");
-
-		["file", "view_principal.html" ] ->
-			handle_file_request (Req, "/file");
-
-		["file", "view_subscription.html" ] ->
-			handle_file_request (Req, "/file");
 		_ ->
 			send_response(Req, #pe_rest_response{status=404,body="Unknown resource pattern"})
 	end.
@@ -533,7 +495,8 @@ handle_create_principal(Request) ->
 		Principal#pe_principal.is_require_message_type_with_new_subs,
 		Principal#pe_principal.secret,
 		Principal#pe_principal.realm,
-		Principal#pe_principal.delivery_url_mask
+		Principal#pe_principal.delivery_url_mask,
+		Principal#pe_principal.durable_messaging_enabled
 	),
 	#pe_rest_response{status=200}.
 
@@ -597,96 +560,8 @@ handle_get_subscription(_Request, Id) ->
 handle_create_subscription(Request) ->
 	Body = Request:recv_body(),
 	Subscription = pe_json:decode_subscription(Body),
-
-	try validate_subscription(Subscription) of
-		valid ->
-			pe_sub_store:create_new(Subscription),
-			#pe_rest_response { status = 200 };
-
-		{invalid, Description} ->
-			#pe_rest_response { status = 400, body = "invalid tag: " ++ atom_to_list(Description) }
-	catch 
-		(unrecognized_format) ->
-			#pe_rest_response { status = 400, body = "unrecognized format" }
-	end.
-
-%
-% check a new subscription for correct format
-%
-% This function returns valid if the subscription conforms to the 
-% format requirements and invalid otherwise.  The function can also throw
-% an exception if the tags use an unrecognized format.
-%
-validate_subscription (Subscription) ->
-	TagsList = pe_tag_util:parse_tag_ids(Subscription#pe_sub.tag_ids),
-	CallBackUrl 	= Subscription#pe_sub.callback_url,
-	System 			= extract_tag(TagsList, "System"),
-	SubSystem 		= extract_tag(TagsList, "Subsystem"),
-	MessageType 	= extract_tag(TagsList, "MessageType"),
-	Client 			= extract_tag(TagsList, "Client"),
-	ClientString 	= extract_tag(TagsList, "ClientString"),
-	RawTags 		= extract_raw_tags(TagsList),
-
-	pe_util:validate_all_inputs([
-		{CallBackUrl, 	callback_url, 	url},
-		{MessageType, 	message_type, 	normal},
-		{Client, 		client, 		normal},
-		{ClientString, 	client_string, 	normal},
-		{System, 		system, 		normal},
-		{SubSystem, 	sub_system, 	normal},
-		{RawTags, 		tags, 			tags}
-	]).
-
-%
-% return the value of a tag, give a list of tags
-%
-% This function searches through a list of tags for a particular 
-% type and returns the value of the first matching tag.
-%
-extract_tag([], _) -> "";
-extract_tag([Tag| Tail], Type) ->
-	case Tag#pe_tag.type == Type of
-		true -> Tag#pe_tag.value;
-		_ -> extract_tag(Tail, Type)
-	end.
-
-%
-% return a list of tags IDs that are not part of the "standard" set.
-%
-% The "standard" set of tags are System, SubSystem, MessageType,
-% Client and ClientString.  If a tag is *not* one of these then 
-% the tag id is returned.
-%
-extract_raw_tags(List) ->
-	extract_raw_tags(List, "").
-
-%
-% Return a list of tag IDs given a list of pe_tag records, and 
-% a string containing the tag list.
-%
-extract_raw_tags([], Result) -> Result;
-extract_raw_tags([Tag | Tail], Result) ->
-	case Tag#pe_tag.type of 
-		"System" 		-> extract_raw_tags(Tail, Result);
-		"SubSystem" 	-> extract_raw_tags(Tail, Result);
-		"MessageType" 	-> extract_raw_tags(Tail, Result);
-		"Client" 		-> extract_raw_tags(Tail, Result);
-		"ClientString" 	-> extract_raw_tags(Tail, Result);
-		_ 				-> 
-			Result2 = append_tag(Tag, Result),
-			extract_raw_tags(Tail, Result2)
-	end.
-
-%
-% append a tag ID to a string of tag IDs.
-%
-% The string should simply contain the tag ID if this is the first
-% tag in the string, otherwise, it should return a list of the form
-% <tag list>,<tag id>
-%
-append_tag(Tag, "") -> Tag#pe_tag.id;
-append_tag(Tag, Result) ->
-	Result ++ "," ++ Tag#pe_tag.id.
+	pe_sub_store:create_new(Subscription),
+	#pe_rest_response { status = 200 }.
 
 %
 % delete a subscription from the system
@@ -712,37 +587,15 @@ handle_list_subscriptions() ->
 	}.
 
 %
-% serve a file on the server
-%
-% This function tries to lookup a specified file in the file system and return 
-% its contents in the response.  
-%
-% The function sets the content type to "text/html" regardless of the file 
-% contents.
-% 
-handle_file_request (Request, Prefix) ->
-	LocalPath = pe_config:get(admin, file_path, "www"),
-	FullPath = Request:get(path),
-
-	case string:str(FullPath, Prefix) of
-		0 -> SubString = FullPath;
-		Index ->
-			SubString = string:substr(FullPath, Index + length(Prefix))
-	end,
-
-	RevisedPath = LocalPath ++ SubString,
-	{ok, Contents} = file:read_file(RevisedPath),
-	send_response (Request, #pe_rest_response{ status=200, body = Contents, content_type="text/html"}).
-
-%
 % return all the principals in the system
 %
 % This function returns a JSON list containing all the principals 
 % in the system.
 %
-handle_list_principals () ->
+handle_list_principals (Request) ->
+	IsWriteUser = authorize(Request, [ "super", "write" ]),
 	Principals = pe_principal_store:get_all_principals(),
-	Structs = pe_json:encode_principal_list(Principals),
+	Structs = pe_json:encode_principal_list(Principals, IsWriteUser),
 	#pe_rest_response {
 		status = 200,
 		content_type="application/json",
@@ -756,6 +609,7 @@ handle_list_principals () ->
 % sends a 404 to the client.
 %
 handle_get_principal (Request, Id) ->
+	IsWriteUser = authorize(Request, [ "super", "write" ]),
 	case pe_principal_store:lookup(Id) of
 		none -> 
 			send_response(Request, #pe_rest_response{ status=404, body= "Not found " ++ Id });
@@ -763,7 +617,7 @@ handle_get_principal (Request, Id) ->
 			#pe_rest_response {
 				status = 200,
 				content_type = "application/json",
-				body = mochijson2:encode(pe_json:encode_principal(Principal))
+				body = mochijson2:encode(pe_json:encode_principal(Principal, IsWriteUser))
 			}
 	end.
 

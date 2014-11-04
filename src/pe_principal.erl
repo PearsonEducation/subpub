@@ -8,8 +8,8 @@
 
 -export([
 	get/2, 
-	instance/8, 
 	instance/9, 
+	instance/10, 
 	is_url_within_mask/2,
 	to_string/1
 ]).
@@ -41,12 +41,15 @@ get(realm, Principal) ->
   Principal#pe_principal.realm;
   
 get(delivery_url_mask, Principal) ->
-  Principal#pe_principal.delivery_url_mask.
+  Principal#pe_principal.delivery_url_mask;
+  
+get(durable_messaging_enabled, Principal) ->
+  Principal#pe_principal.durable_messaging_enabled.
 
-instance(PrincipalId, FriendlyName, TagRecords, RequireMessageTypeWithSubscription, Secret, DateCreated, Realm, DeliveryUrlMask) ->
-  instance(PrincipalId, FriendlyName, TagRecords, RequireMessageTypeWithSubscription, Secret, DateCreated, undefined, Realm, DeliveryUrlMask).
+instance(PrincipalId, FriendlyName, TagRecords, RequireMessageTypeWithSubscription, Secret, DateCreated, Realm, DeliveryUrlMask, DurableMessagingEnabled) ->
+  instance(PrincipalId, FriendlyName, TagRecords, RequireMessageTypeWithSubscription, Secret, DateCreated, undefined, Realm, DeliveryUrlMask, DurableMessagingEnabled).
 
-instance(PrincipalId, FriendlyName, TagRecords, RequireMessageTypeWithSubscription, Secret, DateCreated, DateDeactivated, Realm, DeliveryUrlMask) ->
+instance(PrincipalId, FriendlyName, TagRecords, RequireMessageTypeWithSubscription, Secret, DateCreated, DateDeactivated, Realm, DeliveryUrlMask, DurableMessagingEnabled) ->
   #pe_principal{
     id=PrincipalId, 
     friendly_name=FriendlyName, 
@@ -56,7 +59,8 @@ instance(PrincipalId, FriendlyName, TagRecords, RequireMessageTypeWithSubscripti
     date_deactivated=DateDeactivated,
     secret=Secret,
     realm=Realm,
-    delivery_url_mask=DeliveryUrlMask
+    delivery_url_mask=DeliveryUrlMask,
+    durable_messaging_enabled=DurableMessagingEnabled
   }.
 
 %
@@ -64,7 +68,7 @@ instance(PrincipalId, FriendlyName, TagRecords, RequireMessageTypeWithSubscripti
 %
 to_string (Principal) ->
 	io_lib:format(
-		"{ ~p, ~p, ~p, ~p, ~p, ~p, ~p, ~p, ~p }", 
+		"{ ~p, ~p, ~p, ~p, ~p, ~p, ~p, ~p, ~p, ~p }", 
 		[ 
 			Principal#pe_principal.id,
 			Principal#pe_principal.friendly_name,
@@ -74,7 +78,8 @@ to_string (Principal) ->
 			Principal#pe_principal.date_deactivated,
 			Principal#pe_principal.secret,
 			Principal#pe_principal.realm,
-			Principal#pe_principal.delivery_url_mask
+			Principal#pe_principal.delivery_url_mask,
+			Principal#pe_principal.durable_messaging_enabled
 		]
 	).
 

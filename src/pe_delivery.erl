@@ -58,7 +58,6 @@ handle_call(Msg, _From, State) ->
 	{reply, unknown, State}.
 
 handle_cast({deliver, Subscription, MessageBin, Secret, From}, State) ->
-    {id,DelAttemptId} = pe_id_broker:get_next(),
 
     TimeoutMilliseconds = pe_config:get(delivery,callback_timeout,?DEFAULT_DELIVERY_TIMEOUT_MILLIS),
     MaxSessions = pe_config:get(delivery,ibrowse_max_sessions,?DEFAULT_IBROWSE_MAX_SESSIONS),
@@ -77,6 +76,7 @@ handle_cast({deliver, Subscription, MessageBin, Secret, From}, State) ->
     RampDownChurnCount = proplists:get_value(rampdown_churn_count, MessageProps),
     NumFailedDeliveries = proplists:get_value(num_failed_deliveries, MessageProps),
 
+    DelAttemptId = MsgId,
     Start = pe_time:current_timestamp(),
     
     pe_audit:log([{sub,SubId},{msg,MsgId},{del_attempt,DelAttemptId}],"ATTEMPTING-DELIVERY"),
@@ -189,11 +189,11 @@ handle_info({ibrowse_async_response_end, ReqId} = Msg, State) ->
 		{Start, From, Status, Body, {MsgId, DelAttemptId, SubId, Timestamp, RampDownChurnCount, NumFailedDeliveries, MessageBin}} ->
 			case Status of
 				"200" ->
-            		pe_audit:log([{sub,SubId},{msg,MsgId},{del_attempt,DelAttemptId},{del_ref,Body},{duration_seconds,pe_time:current_timestamp() - Start},{latency_seconds,pe_time:current_timestamp() - Timestamp},{ramp_churn,RampDownChurnCount}],"DELIVERED"),			
+            		pe_audit:log([{sub,SubId},{msg,MsgId},{del_attempt,DelAttemptId},{del_ref,Body},{duration_seconds,pe_time:current_timestamp() - Start},{latency_seconds,pe_time:current_timestamp() - Timestamp},{ramp_churn,RampDownChurnCount},{num_failed_attempts,NumFailedDeliveries}],"DELIVERED"),			
 					amqp_consume_manager:ack(From),
                     event_manager:notify({msg_delivered, MsgId, SubId});
 				"201" ->
-            		pe_audit:log([{sub,SubId},{msg,MsgId},{del_attempt,DelAttemptId},{del_ref,Body},{duration_seconds,pe_time:current_timestamp() - Start},{latency_seconds,pe_time:current_timestamp() - Timestamp},{ramp_churn,RampDownChurnCount}],"DELIVERED"),			
+            		pe_audit:log([{sub,SubId},{msg,MsgId},{del_attempt,DelAttemptId},{del_ref,Body},{duration_seconds,pe_time:current_timestamp() - Start},{latency_seconds,pe_time:current_timestamp() - Timestamp},{ramp_churn,RampDownChurnCount},{num_failed_attempts,NumFailedDeliveries}],"DELIVERED"),			
 					amqp_consume_manager:ack(From),
                     event_manager:notify({msg_delivered, MsgId, SubId});
 				"412" ->

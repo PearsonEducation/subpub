@@ -27,6 +27,7 @@
   key,
   connection,
   channel,
+  confirmed_channel,
   exchange,
   consumed_queue=undefined,
   consumer_realm,
@@ -34,6 +35,7 @@
   sub_id,
   num_consecutive_connect_attempts=0,
   channel_message_count=0,
+  confirmed_channel_message_count=0,
   is_close_requested=false,
   status=?AC_STATUS_UNINITIALIZED,
   handlers=[{connected,[]},{disconnected,[]},{message,[]},{publish_return,[]}],
@@ -191,31 +193,52 @@ handle_call(connect, _From, State) ->
       {reply, ok, State#ac_state{status=?AC_STATUS_CONNECTING, num_consecutive_connect_attempts=0, is_close_requested=false}}
   end;
 
-handle_call({publish_headers, Payload, Headers, MessageId, _TimeoutMillis, ReplyTag}, {FromPid, _Tag}, #ac_state{is_confirmed_publishing=IsConfirmedPublishing, in_flight_messages=IFMessages, exchange=Exchange, channel=Channel} = State) ->
-  %NOTE (CKC 3/7/12):  TimeoutMillis can be used to set a timer and return a publish_wait_timeout response but that is not yet implemented.
-  case State#ac_state.status of
-    ?AC_STATUS_CONNECTED ->
-      MessageNumber = State#ac_state.channel_message_count + 1,
-      Headers2 = headers_list_to_amqp_table(Headers),
-      BasicPublish = #'basic.publish'{exchange = Exchange, mandatory=true},
-
-      try
-        ok = amqp_channel:call(Channel, BasicPublish, #amqp_msg{payload = Payload, props = #'P_basic'{headers = Headers2, correlation_id = MessageId, delivery_mode=2 }}),
-        
-        NewIFMessages = case IsConfirmedPublishing of
-          %% Only add it to the in-flight messages if publish_confirms are on.  Otherwise there would be a leak because messages would never get removed.
-          true -> gb_trees:insert(MessageNumber, {FromPid, MessageId, ReplyTag}, IFMessages);
-          _ELSE99 -> IFMessages
+handle_call({publish_headers, Payload, Headers, MessageId, TimeoutMillis, ReplyTag}, From, #ac_state{exchange=Exchange, confirmed_channel=undefined, connection=Connection} = State) ->
+  pe_audit:log([],"In confirmed publish_headers"),
+  ConfirmedChannel = case create_channel({Connection, Exchange}, true) of
+        {ok, ConfChannel} -> ConfChannel;
+        {error, CONFIRMED_CHANNEL_ERROR} ->
+          error_logger:error_msg("amqp_connection: Aborting new connection for for confirmed_channel: Unable to open channel: ~p~n", [CONFIRMED_CHANNEL_ERROR]),
+          undefined
         end,
-        {reply, ok, State#ac_state{channel_message_count=MessageNumber, in_flight_messages=NewIFMessages}}
-      catch
-        exit:EXIT ->
-          error_logger:error_msg("amqp_connection: Exit exception while attempting to publish message: ~p~n",[EXIT]),
-          {reply, not_connected, State}
-      end;
-    _ELSE ->
-      {reply, not_connected, State}
-  end;
+  NewState = State#ac_state{confirmed_channel=ConfirmedChannel},
+  handle_call({publish_headers, Payload, Headers, MessageId, TimeoutMillis, ReplyTag}, From, NewState);
+handle_call({publish_headers, Payload, Headers, MessageId, _TimeoutMillis, {_PubType, _Pid, {{_From, IsDurable}, _Input}} = ReplyTag}, {FromPid, _Tag}, #ac_state{is_confirmed_publishing=_IsConfirmedPublishing, in_flight_messages=IFMessages, exchange=Exchange, channel=Channel, confirmed_channel=ConfirmedChannel, connection=_Connection} = State) ->
+  pe_audit:log([],"In un-confirmed publish_headers"),
+	%NOTE (CKC 3/7/12):  TimeoutMillis can be used to set a timer and return a publish_wait_timeout response but that is not yet implemented.
+	case State#ac_state.status of
+		?AC_STATUS_CONNECTED ->
+			Headers2 = headers_list_to_amqp_table(Headers),
+			BasicPublish = #'basic.publish'{exchange = Exchange, mandatory=true},
+
+			case IsDurable of
+				true -> 
+					%%%%Select Confirmed Channel and add new message to IFMessages%%%%
+					%% Only add it to the in-flight messages if publish_confirms are on.  Otherwise there would be a leak because messages would never get removed.
+					MessageNumber = State#ac_state.confirmed_channel_message_count + 1,
+					NewIFMessages = gb_trees:insert(MessageNumber, {FromPid, MessageId, ReplyTag}, IFMessages),
+					try
+						ok = amqp_channel:call(ConfirmedChannel, BasicPublish, #amqp_msg{payload = Payload, props = #'P_basic'{headers = Headers2, correlation_id = MessageId, delivery_mode=2 }}),
+						{reply, publish_wait_timeout, State#ac_state{confirmed_channel_message_count=MessageNumber, in_flight_messages=NewIFMessages, confirmed_channel=ConfirmedChannel}}
+					catch
+						exit:EXIT ->
+						  error_logger:error_msg("amqp_connection: Exit exception while attempting to publish message: ~p~n",[EXIT]),
+						  {reply, not_connected, State}
+					end;
+				_ELSE ->
+					try
+						MessageNumber = State#ac_state.channel_message_count + 1,
+						ok = amqp_channel:call(Channel, BasicPublish, #amqp_msg{payload = Payload, props = #'P_basic'{headers = Headers2, correlation_id = MessageId, delivery_mode=2 }}),
+						{reply, ok, State#ac_state{channel_message_count=MessageNumber, in_flight_messages=IFMessages}}
+					catch
+						exit:EXIT ->
+						  error_logger:error_msg("amqp_connection: Exit exception while attempting to publish message: ~p~n",[EXIT]),
+						  {reply, not_connected, State}
+					end
+			end;
+		_ELSE ->
+			{reply, not_connected, State}
+	end;
 
 handle_call(Msg, _From, State) ->
   error_logger:info_msg("amqp_connection: Unknown handle_call to key ~p: ~p~n",[State#ac_state.key, Msg]),
@@ -283,8 +306,8 @@ handle_info(attempt_connect_then_notify, #ac_state{is_close_requested=IsCloseReq
               end,
 
               notify(connected, State),
-
-              {noreply, State#ac_state{linked_pid=Connection, channel_message_count=0, num_consecutive_connect_attempts=0, connection=Connection, channel=Channel, is_confirmed_publishing=IsConfirmedPublishing, status=?AC_STATUS_CONNECTED}};
+              {noreply, State#ac_state{linked_pid=Connection, channel_message_count=0, confirmed_channel_message_count=0, num_consecutive_connect_attempts=0, connection=Connection, channel=Channel, confirmed_channel=undefined, is_confirmed_publishing=IsConfirmedPublishing, status=?AC_STATUS_CONNECTED}};
+              %{noreply, State#ac_state{linked_pid=Connection, channel_message_count=0, num_consecutive_connect_attempts=0, connection=Connection, channel=Channel, is_confirmed_publishing=IsConfirmedPublishing, status=?AC_STATUS_CONNECTED}};
             {error, CHANNEL_ERROR} ->
               error_logger:error_msg("amqp_connection: Aborting new connection for key ~p: Unable to open channel: ~p~n", [Key, CHANNEL_ERROR]),
               amqp_connection:close(Connection),
@@ -372,7 +395,7 @@ notify_publish_result_recursive(Result, Current, UpTo, Tree) ->
     true ->
       NewTree = case gb_trees:lookup(Current, Tree) of
         {value, {FromPid, MessageId, ReplyTag}} ->
-          FromPid ! {Result, MessageId, ReplyTag},
+	  gen_server:cast(FromPid, {Result, MessageId, ReplyTag}),
           gb_trees:delete(Current, Tree);
         none ->
           Tree
@@ -408,3 +431,31 @@ table_entry(Key,Value,binary) ->
   { list_to_binary(Key),binary,list_to_binary(Value) };
 table_entry(Key,Value,Type) ->
   { list_to_binary(Key),Type,Value }.
+
+%% Resource creation helpers %%
+create_channel({Connection, Exchange}, IsDurable) ->
+	% Create publishing channel %
+	case amqp_connection:open_channel(Connection) of
+		{ok, NewChannel} -> 
+			%Cross-connection params
+			BasicQos = #'basic.qos'{prefetch_size = 0, prefetch_count = pe_config:get(amqp, consumer_prefetch_count,?DEFAULT_PREFETCH_COUNT), global = false},
+			ExchangeDeclare = #'exchange.declare'{exchange = Exchange, type = <<"headers">>, durable = true},
+
+
+			case IsDurable of
+			 true ->
+			    #'confirm.select_ok'{} = amqp_channel:call(NewChannel, #'confirm.select'{}),
+			    ok;
+			 _ELSE -> ok
+			end, 
+
+			#'exchange.declare_ok'{} = amqp_channel:call(NewChannel, ExchangeDeclare),
+
+			#'basic.qos_ok'{} = amqp_channel:call(NewChannel, BasicQos),
+
+			amqp_channel:register_return_handler(NewChannel, self()),
+			amqp_channel:register_confirm_handler(NewChannel, self()),
+
+			{ok, NewChannel};
+		{error, CHANNEL_ERROR} -> {error, CHANNEL_ERROR}
+	end.

@@ -5,39 +5,36 @@
 %   you may not use this file except in compliance with the License.
 
 -module(pe_import).
--compile(export_all).
+-export([import_principals/1, import_subscriptions/1]).
 -include("include/sxml.hrl").
 -include("include/prospero.hrl").
-
-
-all_prin() ->
-	Fun = fun(ID) ->
-		io:format("~p~n", [pe_principal_store:lookup(ID)])
-	end,
-	lists:foreach(Fun, mnesia:dirty_all_keys(pe_principal)).
-
-
-import(Directory) ->
-	SubsFilePath = Directory ++ "/subscriptions.xml",
-	Subscriptions = import_subscriptions(SubsFilePath),
-	lists:foreach(fun(Sub) -> pe_sub_store:create_new(Sub) end, Subscriptions),
-
-	PrincipalsFilePath = Directory ++ "/principals.xml",
-	Principals = import_principals(PrincipalsFilePath),
-	lists:foreach(fun(Sub) -> pe_principal_store:create_new(Sub) end, Principals).
 
 
 import_principals(Filename) ->
 	Func = fun(Node) ->
 		to_principal(Node)
 	end,
-	import_list(Filename, Func).
+	Principals = import_list(Filename, Func),
+	lists:foreach(
+		fun(Principal) ->
+			pe_principal_store:create_new(Principal)
+		end,
+		Principals
+	),
+	io:format("imported ~p principals~n", [length(Principals)]).
 
 import_subscriptions(Filename) ->
 	Func = fun(Node) ->
 		to_subscription(Node)
 	end,
-	import_list(Filename, Func).
+	Subscriptions = import_list(Filename, Func),
+	lists:foreach(
+		fun(Sub) ->
+			pe_sub_store:create_new(Sub)
+		end,
+		Subscriptions
+	),
+	io:format("imported ~p subscriptions~n", [length(Subscriptions)]).
 
 import_list(Filename, Func) ->
 	{XmlRoot, _} = xmerl_scan:file(Filename),
@@ -51,51 +48,23 @@ node_list_to_list([First | Rest], Func) ->
 
 
 
-% to_record(Branch) when is_record(Branch, branch) ->
-%	List = add_attrs([to_atom(Branch#branch.name)], Branch#branch.attrs),
-%	ChildList = node_list_to_list(Branch#branch.children),
-%	list_to_tuple(lists:append(List, ChildList));
-%
-%to_record(Leaf) when is_record(Leaf, leaf) ->
-%	List = add_attrs([to_atom(Leaf#leaf.name)], Leaf#leaf.attrs),
-%	list_to_tuple(List);
-%	
-%to_record([_First | _Rest]) -> unknown.
-	
-
-to_atom(Atom) when is_atom(Atom) -> Atom;
-to_atom(Atom) when is_list(Atom) -> list_to_atom(Atom).
-
-
-create_record(Name, AttrList) ->
-	add_attrs([to_atom(Name)], AttrList).
-
-
-add_attrs(OutList, []) -> OutList;
-add_attrs(OutList, [{_Name, Value}| Rest]) ->
-	List = lists:append(OutList, [Value]),
-	add_attrs(List, Rest).
-
-
-to_tag(Node) ->
-	#pe_tag{
-		id = sxml:get_attr(Node, id),
-		type = (sxml:get_child(type, Node))#leaf.value,
-		value = (sxml:get_child(value, Node))#leaf.value
-	}.
-
 to_subscription(Node) ->
 	{ok, DateCreated} = pe_time:parse_8601(sxml:get_child_value(date_created, Node)),
 	{ok, DateCancelled} = pe_time:parse_8601(sxml:get_child_value(date_cancelled, Node)),
-
+	PrincipalId = sxml:get_child_value(principal_id, Node),
+	CallbackUrl = sxml:get_child_value(callback_url, Node),
+	TagIds = to_tag_id_list(Node),
+	DuplicationKey = pe_sub:make_duplication_key(CallbackUrl, "", PrincipalId, TagIds),
+	
 	#pe_sub{
 		id = sxml:get_attr(Node, id),
-		principal_id = sxml:get_child_value(principal_id, Node),
-		callback_url = sxml:get_child_value(callback_url, Node),
+		principal_id = PrincipalId,
+		callback_url = CallbackUrl,
 		queue_name = sxml:get_child_value(queue_name, Node),
 		date_created = DateCreated,
 		date_cancelled = DateCancelled,
-		tag_ids = to_tag_id_list(Node)
+		tag_ids = TagIds,
+		duplication_key = DuplicationKey
 	}.
 
 
@@ -106,19 +75,12 @@ to_tag_id_list(Node) ->
 	map_tag_node_list(Node, ExtractId).
 
 
-to_tag_list(Node) ->
-	ExtractTag = fun(TagNode) ->
-		to_tag(TagNode)
-	end,
-	map_tag_node_list(Node, ExtractTag).
-
-
 map_tag_node_list(Node, Func) ->
 	case sxml:get_child(tags, Node) of
-		undefined -> undefined;
+		undefined -> [];
 		Child -> 
 	case Child of 
-		#leaf{} -> undefined;
+		#leaf{} -> [];
 		#branch{children = Children} ->
 			node_list_to_tag_list(Children, Func)
 	end
@@ -133,15 +95,23 @@ node_list_to_tag_list([First | Rest], Func) ->
 to_principal (Node) ->
 	{ok, DateCreated} = pe_time:parse_8601(sxml:get_child_value(date_created, Node)),
 	{ok, DateDeactivated} = pe_time:parse_8601(sxml:get_child_value(date_deactivated, Node)),
-
+	RequireMessageType = case sxml:get_child_value(is_require_message_type_with_new_subs, Node) of
+		"true" -> true;
+		_Otherwise -> false
+	end,
+	DurableMessagingEnabled = case sxml:get_child_value(durable_messaging_enabled, Node) of
+		"true" -> true;
+		_Else -> false
+	end,
 	#pe_principal {
 		id = sxml:get_attr(Node, id),
 		friendly_name = sxml:get_child_value(friendly_name, Node),
 		enforced_tag_ids = to_tag_id_list(Node),
-		is_require_message_type_with_new_subs = 
-			sxml:get_child_value(is_require_message_type_with_new_subs, Node),
+		is_require_message_type_with_new_subs = RequireMessageType,
 		date_created = DateCreated,
 		date_deactivated = DateDeactivated,
 		secret = sxml:get_child_value(secret, Node),
-		realm = sxml:get_child_value(realm, Node)
+		realm = sxml:get_child_value(realm, Node),
+		delivery_url_mask = sxml:get_child_value(delivery_url_mask, Node),
+		durable_messaging_enabled = DurableMessagingEnabled
 	}.

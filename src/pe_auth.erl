@@ -8,7 +8,7 @@
 
 -include("include/prospero.hrl").
 
--export([authenticate/4, authenticate/5, make_token/4]).
+-export([authenticate/4, authenticate/5, make_token/4, parse_authorization/2]).
 
 parse_authorization(Token, Delim) ->
   case string:tokens(Token,Delim) of

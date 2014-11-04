@@ -54,11 +54,10 @@ loop_attempt_publish_headers(ReturnType, Brokers, Headers, Payload, MessageId, T
 			{error, no_brokers};
 		{{Key, Broker}, RemainingBrokers} ->
 			case amqp_managed_connection:publish_headers(Broker, Headers, Payload, MessageId, TimeoutMillis, ReplyTag) of
-				ok ->
-					ok;
 				not_connected ->
 					error_logger:info_msg("amqp_balanced_publisher: Broker ~p returned not_connected while attempting to publish message ~p.  Will retry.~n",[Key, MessageId]),
-					loop_attempt_publish_headers(ReturnType, RemainingBrokers, Headers, Payload, MessageId, TimeoutMillis, ReplyTag)
+					loop_attempt_publish_headers(ReturnType, RemainingBrokers, Headers, Payload, MessageId, TimeoutMillis, ReplyTag);
+				_Val -> _Val
 			end
 	end.
 
@@ -86,6 +85,8 @@ handle_call({publish_headers, sync, MessageId, Headers, Payload, TimeoutMillis},
 	case loop_attempt_publish_headers(sync, State#abp_state.brokers, Headers, Payload, MessageId, TimeoutMillis, {sync, From}) of
 		ok ->
 			{noreply, State};
+		publish_wait_timeout ->
+			{reply, publish_wait_timeout, State};
 		ERROR ->
 			{reply, ERROR, State}
 	end;
@@ -94,6 +95,8 @@ handle_call({publish_headers, async, MessageId, Headers, Payload, TimeoutMillis,
 	case loop_attempt_publish_headers(async, State#abp_state.brokers, Headers, Payload, MessageId, TimeoutMillis, {async, Pid, ReplyTag}) of
 		ok ->
 			{reply, ok, State};
+		publish_wait_timeout ->
+			{reply, publish_wait_timeout, State};
 		ERROR ->
 			{reply, ERROR, State}
 	end;
@@ -101,6 +104,16 @@ handle_call({publish_headers, async, MessageId, Headers, Payload, TimeoutMillis,
 handle_call(Msg, _From, State) ->
 	error_logger:info_msg("amqp_balanced_publisher: Unknown handle_call: ~p~n",[Msg]),
 	{reply, {error, unknown}, State}.
+
+%% Handle the publish_confirm response and pass it back up the chain to pe_msg_intake %%
+handle_cast({publish_confirm, MessageId, ReplyTag}, State) ->
+	do_notify(MessageId, publish_confirm, ReplyTag),
+	{noreply, State};
+
+%% Handle the publish_reject response and pass it back up the chain to pe_msg_intake %%
+handle_cast({publish_reject, MessageId, ReplyTag}, State) ->
+	do_notify(MessageId, publish_reject, ReplyTag),
+	{noreply, State};
 
 handle_cast(Msg, State) ->
 	error_logger:info_msg("amqp_balanced_publisher: Unknown handle_cast: ~p~n",[Msg]),
@@ -111,8 +124,9 @@ do_notify(MessageId, Response, ReplyTo) ->
 		{sync, From} ->
 			gen_server:reply(From, {Response, MessageId});
 		{async, Pid, ReplyTag} ->
-			Pid ! {Response, MessageId, ReplyTag}
-	end.
+			gen_server:cast(Pid, {Response, MessageId, ReplyTag})
+	end,
+	ok.
 
 handle_info({disconnected,{key, Key},{pid, BrokerPid}}, #abp_state{brokers=Brokers} = State) ->
 	error_logger:info_msg("amqp_balanced_publisher: Received disconnected message from broker for key ~p as pid ~p~n",[Key, BrokerPid]),

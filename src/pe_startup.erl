@@ -25,16 +25,17 @@ start([Phase|Phases]) ->
   end.
   
 start_phase({Specs,Callback}) ->
-  lists:foreach(fun(E) ->
-    io:format("Starting ~p...~n",[E]),
-    case pe_sup:start_child(E) of
-      {ok, Pid} ->
-        {ok, Pid};
-      [Error] ->
-        {error, Error}
-    end
-  end,Specs),
-  call(Callback).
+	lists:foreach(
+		fun(E) ->
+			io:format("Starting ~p...~n",[E]),
+			case pe_sup:start_child(E) of
+				{ok, Pid} -> {ok, Pid};
+				[Error] -> {error, Error}
+			end
+		end,
+		Specs
+	),
+	call(Callback).
 
 call(undefined) ->
   ok;
@@ -192,14 +193,14 @@ get_startup_phases() ->
               [pe_status]
            },              
 
-  Export = {
-              pe_export,
-              {pe_export,start_link, []},
-              permanent,
-              2000,
-              worker,
-              [pe_export]
-           },              
+	Collect = {
+		pe_collect,
+		{pe_collect, start_link, []},
+		permanent,
+		5000,
+		worker,
+		[pe_status]
+	},
   [           
     {
       [Config, Audit, EvntMgr],
@@ -227,7 +228,7 @@ get_startup_phases() ->
       end
     },
     {
-      [Status, Rest, Export, Admin],
+      [Status, Rest, Admin, Collect],
       undefined
     }
   ].
@@ -242,6 +243,8 @@ preset_config(Parent, Key) ->
 
 post_config_started() ->
   preset_config(admin, file_path),
+  preset_config(admin, memory_period),
+  preset_config(admin, high_water_mark),
   preset_config(admin, passwd),
   preset_config(admin, port),
   preset_config(admin, private_key),

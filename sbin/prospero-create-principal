@@ -17,9 +17,10 @@ P_MT_SUB_REQ=$4
 P_SECRET=$5
 P_REALM=$6
 P_URL_MASK=$7
-HOST=$8
+P_DURABLE_MESSAGING_ENABLED=$8
+HOST=$9
 
-USAGE="Usage: $ME PrincipalId FriendlyName EnforcedContextTagsCommaDelim IsMessageTypeRequiredForAllSubscriptions(true|false) SecretKey Realm DeliveryUrlMask ProsperoNode"
+USAGE="Usage: $ME PrincipalId FriendlyName EnforcedContextTagsCommaDelim IsMessageTypeRequiredForAllSubscriptions(true|false) SecretKey Realm DeliveryUrlMask DurableMessagingEnabled(true|false) ProsperoNode"
 
 if [ "x" = "x$P_ID" ]
 then
@@ -57,6 +58,13 @@ then
   echo "A delivery url mask was not specified, using *.\n"
 fi
 
+if [ "x" = "x$P_DURABLE_MESSAGING_ENABLED" ]
+then
+  P_DURABLE_MESSAGING_ENABLED=false
+  echo "The durable messaging enabled flag was not provided. Using the default value of false.\n"
+fi
+
+
 if [ "x" = "x$HOST" ]
 then
   #HOSTNAME=`hostname`
@@ -69,6 +77,6 @@ fi
 
 
 
-erl -pa ebin -name rotate -setcookie "${PROSPERO_ERLANG_COOKIE}" -noinput -hidden -eval "pe_remote:create_principal('$PNODE',\"$P_ID\",\"$P_NAME\",\"$P_TAGS\",$P_MT_SUB_REQ,\"$P_SECRET\",\"$P_REALM\",\"$P_URL_MASK\")."
+erl -pa ebin -name rotate -setcookie "${PROSPERO_ERLANG_COOKIE}" -noinput -hidden -eval "pe_remote:create_principal('$PNODE',\"$P_ID\",\"$P_NAME\",\"$P_TAGS\",$P_MT_SUB_REQ,\"$P_SECRET\",\"$P_REALM\",\"$P_URL_MASK\",$P_DURABLE_MESSAGING_ENABLED)."
 
 cd $ORIG_PATH

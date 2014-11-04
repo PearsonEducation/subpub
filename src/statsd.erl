@@ -138,13 +138,13 @@ send({gauge, Stat, Reading}) ->
 %
 % Raw UDP send message function
 %
-send_udp_message(Host, Port, Msg) when is_integer(Port),
-                                         is_list(Host) ->
+send_udp_message(Host, Port, Msg) when is_integer(Port) ->
   {ok, Socket} = gen_udp:open(0, [binary]),
   ok = gen_udp:send(Socket, Host, Port, Msg),
   gen_udp:close(Socket),
   {ok, "Success."}.
 
+-ifdef(NOSKIP).
 %
 % unit tests
 %
@@ -183,4 +183,5 @@ gauge_test_() ->
   ?_assert(gauge([stat1, stat2], 100) =:= {ok, "Success."})
       ].
 
+-endif.
 -endif.

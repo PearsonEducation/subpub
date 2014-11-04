@@ -3,10 +3,10 @@
 ORIG_PATH=`pwd`
 cd `dirname $0`
 
-./prospero-create-principal ONE One "" true 1234567890123456 "*" "*" $1
-./prospero-create-principal TWO Two "" false 1234567890123456 "*" "*" $1
-./prospero-create-principal THREE Three "Client:Three" false 1234567890123456 "*" "*" $1
-./prospero-create-principal FOUR Four "Client:Four" false 1234567890123456 "*" "*.eclg.org" $1
-./prospero-create-principal FIVE Five "" false 1234567890123456 "realm2" "*" $1
+./prospero-create-principal ONE One "" true 1234567890123456 "*" "*" false $1
+./prospero-create-principal TWO Two "" false 1234567890123456 "*" "*" false $1
+./prospero-create-principal THREE Three "Client:Three" false 1234567890123456 "*" "*" false $1
+./prospero-create-principal FOUR Four "Client:Four" false 1234567890123456 "*" "*.eclg.org" false $1
+./prospero-create-principal FIVE Five "" false 1234567890123456 "realm2" "*" true $1
 
 cd $ORIG_PATH

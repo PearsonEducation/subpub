@@ -17,7 +17,7 @@
  
 -export([start/0, start/1, start_link/0, start_link/1, stop/0]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
--export([v4/0, random/0, srandom/0, sha/2, md5/2, timestamp/0, timestamp/2, to_string/1]).
+-export([v4/0, random/0, srandom/0, srandom/3, sha/2, md5/2, timestamp/0, timestamp/2, to_string/1]).
  
 -define(SERVER, ?MODULE).
 -define(UUID_DNS_NAMESPACE, <<107,167,184,16,157,173,17,209,128,180,0,192,79,212,48,200>>).
@@ -56,6 +56,9 @@ random() ->
 srandom() ->
     {A1,A2,A3} = erlang:now(),
     random:seed(A1, A2, A3),
+    random().
+srandom(S1,S2,S3) ->
+    random:seed(S1, S2, S3),
     random().
  
 %% @spec sha(Namespace, Name) -> uuid()

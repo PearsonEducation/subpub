@@ -13,6 +13,9 @@
 -export([accept/4, delete/1, delete_async/1, start_link/0, delete_all/0]).
 
 -include("include/prospero.hrl").
+
+-define(DEFAULT_REGEX,"(?!)").
+-define(REGEX_CONFIG_FILENAME,"regexes.config").
  
 start_link() -> gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
@@ -57,7 +60,7 @@ validate_properties(TagRecords, IsRequireMessageTypeWithNewSubs, WsdlUri, Callba
         ok ->
           case is_delivery_url_within_principal_mask(Principal, find_url(Callback, WsdlUri)) of
             ok ->
-              ok;
+              is_delivery_url_spam(find_url(Callback, WsdlUri),Principal);
             _ELSE ->
               {out_of_mask_url, "wsdl_uri and callback_url must fall within the domain mask configured for the principal"}
           end;
@@ -75,7 +78,57 @@ find_url(CallbackUrl, _) ->
 
 is_delivery_url_within_principal_mask(Principal, Url) ->
   pe_principal:is_url_within_mask(Url, Principal).
-  
+
+is_delivery_url_spam(CallbackUrl,Principal) ->
+  {ok, {_Scheme, _UserInfo, Hostname, _Port, _Path, _Query}} = http_uri:parse(CallbackUrl),
+  Conf = get_callback_validation_conf(Principal#pe_principal.id),
+  LogData = [{principal_id,Principal#pe_principal.id},{callback_url,CallbackUrl},{hostname,Hostname},{regex,Conf}],
+  case try_resolve_dns(Hostname) of
+    ok -> 
+      case validate_callback_hostname_with_regex(Hostname, Conf) of
+        ok -> ok;
+        {url_is_spam,ErrorMsg} -> {url_is_spam,{ErrorMsg,[{regex_match_failed,true}] ++ LogData}}
+      end;
+    {url_is_spam,ErrorMsg} -> {url_is_spam,{ErrorMsg,[{dns_query_failed,true}] ++ LogData}}
+  end.
+
+validate_callback_hostname_with_regex(Hostname, Regex) ->
+  case re:run(Hostname, Regex) of
+    nomatch ->
+      ok;
+    _AnyMatch ->
+      {url_is_spam, Hostname ++ " was rejected, supply a reachable hostname for callbacks"}
+  end.
+
+try_resolve_dns(Hostname) ->
+  case inet:gethostbyname(Hostname) of
+    {ok, _Hostent} ->
+      ok;
+    {error, nxdomain} ->
+      {url_is_spam, "error in DNS resolution, hostname: \"" ++ Hostname ++ "\" not resolvable"};
+    {error, Error} ->
+      {url_is_spam, io:format("unknown error in DNS resolution: ~p",[Error])}
+  end.
+
+get_callback_validation_conf(Key) ->
+  case file:consult(?REGEX_CONFIG_FILENAME) of
+    {ok, Proplist} ->
+      case proplists:get_value(Key,Proplist) of
+        RegexString when is_list(RegexString) ->
+          RegexString;
+        _ ->
+          case proplists:get_value(default,Proplist) of
+              RegexString when is_list(RegexString) ->
+                RegexString;
+              _ ->
+                ?DEFAULT_REGEX
+          end
+      end;
+    {error, Reason} ->
+      error_logger:error_msg("pe_sub_intake: get_callback_validation_conf unable to load config file ~w with error: ~p~n", [?REGEX_CONFIG_FILENAME,Reason]),
+      ?DEFAULT_REGEX
+  end.
+
 strip_wsdl_param(undefined) ->
   undefined;
 strip_wsdl_param(Resource) ->
@@ -120,6 +173,8 @@ handle_call({new, CallbackIn, Tags, PrincipalId, WsdlUriIn}, _From, _State) ->
           {invalid_request, {missing_tag, Tag}};
         {out_of_mask_url, Error} ->
           {invalid_request, {out_of_mask_url, Error}};
+        {url_is_spam, Error} ->
+          {invalid_request, {url_is_spam, Error}};
         UNRECOGNIZED ->
           error_logger:error_msg("pe_sub_intake: Unrecognized result from validate_properties(): ~p~n", [UNRECOGNIZED]),
           error
@@ -140,20 +195,8 @@ handle_call({delete, SubscriptionId}, _From, _State) when is_list(SubscriptionId
 
 handle_call({delete, Subscription}, _From, State) ->
   {Result, State} = handle_delete(Subscription, State),
-  {reply, Result, State};
+  {reply, Result, State}.
   
-handle_call(delete_all, _From, _State) ->
-  Ids = pe_sub_store:get_all_ids(),
-  lists:foreach(
-    fun(Id) ->
-      {found, Sub} = pe_sub_store:lookup(Id),
-      do_delete(Sub)
-    end,
-    Ids
-  ),
-  {reply,ok,_State}.
-
-
 do_delete(Subscription) ->
   %% CKC: Note that we're not calling `event_manager:notify({sub_cancelled, Subscription})` because pe_sub_store does this for us based on an mnesia table event
   {cancelled,_Sub} = pe_sub_store:cancel(Subscription),

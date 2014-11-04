@@ -4,7 +4,7 @@
 %
 %   you may not use this file except in compliance with the License.
 
--record(pe_principal, {id, friendly_name, enforced_tag_ids=[], is_require_message_type_with_new_subs=false, date_created, date_deactivated, secret, realm="*", delivery_url_mask="*"}).
+-record(pe_principal, {id, friendly_name, enforced_tag_ids=[], is_require_message_type_with_new_subs=false, date_created, date_deactivated, secret, realm="*", delivery_url_mask="*", durable_messaging_enabled=false}).
 
 -record(pe_sub, {id, principal_id, callback_url, wsdl_uri, queue_name, tag_ids=[], date_created, date_cancelled, duplication_key}).
 
@@ -19,6 +19,12 @@
 -record(pe_amqp_conn, {connection, exchange, channel, host}).
 
 -record(pe_kvpair, {key, value}).
+
+-record(message_key, {client, clientString, messageType, system, subSystem}).
+
+-record(registry_message, {key, totalBytes, totalMessages, content}).
+
+-record(node_statistics, {startTime, upTime, messages}).
 
 -record(status, {node, version, num_messages_posted, num_messages_delivered, num_failed_deliveries, time_started, uptime, num_watched_subscriptions, subscription_pids, pids_awaiting_broker_reconnection=[], rest_status}).
 

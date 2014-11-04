@@ -10,7 +10,7 @@
         {number_of_workers, 4000},
         {max_failed_attempts,        {{ maxFailedAttempts}}},
         {callback_timeout,           {{ callbackTimeoutMillis }}},
-        {ibrowse_max_sessions,       4000},
+        {ibrowse_max_sessions,       10},
         {ibrowse_max_pipeline_size,  1000},
         {rampdown_multiplier,        1.05},
         {rampdown_interval_seconds,  2},
@@ -60,13 +60,14 @@
 		%
 		% number of milliseconds that a token is good for
 		%
-		{token_threshold, 3600000}
+		{token_threshold, 3600000},
+		{high_water_mark, {{ high_water_mark }} }
 	]},
     {auth, [
         {token_date_threshold_milliseconds, 3600000}
     ]},
     {stats, [
-        {host, "localhost"},
+        {host, {127, 0, 0, 1}},
         {port, 8125}
       ]}
   ]}

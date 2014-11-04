@@ -59,7 +59,6 @@ init([]) ->
   
 
 handle_call({new, Principal}, _From, State) ->
-io:format("principal = ~p~n", [Principal]),
   Fun = fun() ->
     Updated = case Principal#pe_principal.date_created == undefined of 
 		true -> Principal#pe_principal{date_created=pe_time:current_timestamp()} ;

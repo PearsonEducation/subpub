@@ -21,7 +21,7 @@
 }).
 
 log(Args,Msg) ->
-  gen_server:call(?MODULE, {log, Args, Msg, pe_time:format_8601()}).
+  gen_server:cast(?MODULE, {log, Args, Msg, pe_time:format_8601()}).
   
 reset() ->
   gen_server:call(?MODULE, reset).
@@ -31,7 +31,7 @@ start_link() -> gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
 acquire_handle() ->
   Path = get_log_path(),
-  {ok, Handle} = file:open(Path, [append]),
+  {ok, Handle} = file:open(Path, [append,raw]),
   {Handle, Path}.
   
 init([]) ->
@@ -94,15 +94,9 @@ handle_cast(flush, #pa_state{handle=undefined} = State) ->
 
 handle_cast(flush, #pa_state{queue=Queue, handle={Handle, _Path}, newline_re=ReNewline, dos_newline_re=ReDosNewLine} = State) ->
   NewQueue = do_flush(Queue, Handle, ReNewline, ReDosNewLine),
-  {noreply, State#pa_state{queue=NewQueue, flush_requested=false}}.
+  {noreply, State#pa_state{queue=NewQueue, flush_requested=false}};
 
-handle_call({log, Args, Msg, Time}, _From, #pa_state{handle=HandleIn, newline_re=ReNewline, dos_newline_re=ReDosNewLine} = State) ->
-  %NewQueue = queue:in({Args, Msg, Time}, Queue),
-
-  %case FlushRequested of
-  %  true -> ok;
-  %  false -> gen_server:cast(?MODULE, flush)
-  %end,
+handle_cast({log, Args, Msg, Time}, #pa_state{handle=HandleIn, newline_re=ReNewline, dos_newline_re=ReDosNewLine} = State) ->
 
   {Handle, _Path} = NewHandle = case HandleIn of
     undefined ->
@@ -111,10 +105,14 @@ handle_call({log, Args, Msg, Time}, _From, #pa_state{handle=HandleIn, newline_re
       _HANDLE
   end,
 
-  LineArgs = [Time,Msg,format_args(Args, ReNewline, ReDosNewLine)],
-  io:format(Handle, "~s ~s ~s~n", LineArgs),  
+  %%LineArgs = [Time,Msg,format_args(Args, ReNewline, ReDosNewLine)],
+  %%io:format(Handle, "~s ~s ~s~n", LineArgs),  
 
-  {reply, ok, State#pa_state{handle=NewHandle}};
+  LineArgs = io_lib:format("~s ~s ~s~n", [Time,Msg,format_args(Args, ReNewline, ReDosNewLine)]),
+  file:write(Handle, LineArgs),  
+
+
+  {noreply, State#pa_state{handle=NewHandle}}.
  
 handle_call(reset, _From, #pa_state{handle={Handle, _Path}} = State) ->
   file:close(Handle),
@@ -140,3 +138,4 @@ test(0) ->
 test(Num) ->
   log([{time, Num},{blah,"Foo"}],"TESTITEM"),
   test(Num-1).
+

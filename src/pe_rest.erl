@@ -200,8 +200,6 @@ handle_request(Req, PathPrefix) ->
               end;
             "clear_subscriptions" ->
               case Req:get(method) of
-                'POST' ->
-                  send_response(Req, handle_clear_subscriptions(Req));
                 _ ->
                   send_response(Req, #pe_rest_response{status=405, body="Method Not Allowed"})
               end;
@@ -493,6 +491,9 @@ handle_post_subscription(Req) ->
                     #pe_rest_response{status=400, content_type="text/plain", body="Invalid callback url: " ++ Error};
                   {invalid_request, {duplicate_subscription, DupedSubId}} ->
                     #pe_rest_response{status=409, content_type="text/plain", body="Duplicate of subscription " ++ DupedSubId, headers=[{"X-Prospero-Subscription-Id", DupedSubId}]};
+                  {invalid_request, {url_is_spam, {ErrorMsg, LogData}}} ->
+                    pe_audit:log(LogData,"SUBSCRIPTION-REJECTED"),
+                    #pe_rest_response{status=400, content_type="text/plain", body="Callback URL failed validation: " ++ ErrorMsg};
                   {error, unable_to_connect_to_broker} ->
                     #pe_rest_response{status=500, content_type="text/plain", body="Unable to intake subscription: There is a problem with the messaging infrastructure (unable_to_connect_to_broker), please contact your administrator."};
                   {error, Error} ->
@@ -511,21 +512,30 @@ handle_post_subscription(Req) ->
 
 get_publish_consistency_or_default(Req) ->
   case Req:get_primary_header_value("x-publish-consistency") of
-    "sync" -> true;
+    "sync" -> 
+	case is_durable_messaging_enabled(Req) of
+		true -> true;
+		false -> unauthorized
+	end;
     "async" -> false;
     _ -> pe_config:get(amqp, confirmed_publishing, ?DEFAULT_CONFIRMED_PUBLISHING)
   end.
 
 handle_post_message(Req) ->
-  IsConfirmedPublishing = get_publish_consistency_or_default(Req),
-  case Req:get_primary_header_value("content-type") of
-    "application/x-www-form-urlencoded" ++ _ ->
-      handle_post_message_urlencoded(Req, IsConfirmedPublishing);
-    "multipart/form-data" ++ _ ->
-      handle_post_message_multipart(Req, IsConfirmedPublishing);
-    _ ->
-      #pe_rest_response{status=400, body="Messages must be posted with either a query string style application/x-www-form-urlencoded format or mime encoded with multipart/form-data"}
-  end.
+	case get_publish_consistency_or_default(Req) of
+		unauthorized -> 
+			#pe_rest_response{status=403, body="FORBIDDEN: Request to publish message with publish conistency is forbidden for this principal."};
+		_Val -> 
+			IsConfirmedPublishing = _Val,
+			case Req:get_primary_header_value("content-type") of
+				"application/x-www-form-urlencoded" ++ _ ->
+					handle_post_message_urlencoded(Req, IsConfirmedPublishing);
+				"multipart/form-data" ++ _ ->
+					handle_post_message_multipart(Req, IsConfirmedPublishing);
+				_ ->
+					#pe_rest_response{status=400, body="Messages must be posted with either a query string style application/x-www-form-urlencoded format or mime encoded with multipart/form-data"}
+			end				
+	end.
 
 
 validate_payload_content_type(Arg) -> pe_util:validate_payload_content_type(Arg).
@@ -614,16 +624,19 @@ intake_post(Req, PayloadAndContentType, UnparsedTags, MessageType, Auth, Delim, 
   end.
  
 publish(Payload, MessageType, Tags, PrincipalId, Realm, PayloadContentType, IsConfirmedPublishing) ->
-  case pe_msg_intake:accept(Payload, MessageType, Tags, PrincipalId, Realm, PayloadContentType, IsConfirmedPublishing) of
-    {publish_confirm,MessageId} ->
-      #pe_rest_response{content_type="application/json", body=io_lib:format("{\"message\": {\"id\": \"~s\"}}",[MessageId])};
-    {invalid_request, {missing_tag, Tag}} ->
-      #pe_rest_response{status=400, content_type="text/plain", body="The context tag '" ++ Tag ++ "' is required"};
-    {error, no_available_brokers} ->
-      #pe_rest_response{status=500, content_type="text/plain", body="Unable to intake message: There is a problem with the messaging infrastructure (no_available_brokers), please contact your administrator."};
-    {error, Error} ->
-      #pe_rest_response{status=500, content_type="text/plain", body=io_lib:format("Unable to intake message: ~p",[Error])}
-  end.
+	case pe_msg_intake:accept(Payload, MessageType, Tags, PrincipalId, Realm, PayloadContentType, IsConfirmedPublishing) of
+		{publish_confirm,MessageId} ->
+			#pe_rest_response{content_type="application/json", body=io_lib:format("{\"message\": {\"id\": \"~s\"}}",[MessageId])};
+		{publish_wait_timeout, _MessageId} ->
+			% After receiving a publish_wait_timeout send to recieve loop to wait for pub/confirm response %
+			handle_publish_confirm_response();
+		{invalid_request, {missing_tag, Tag}} ->
+			#pe_rest_response{status=400, content_type="text/plain", body="The context tag '" ++ Tag ++ "' is required"};
+		{error, no_available_brokers} ->
+			#pe_rest_response{status=500, content_type="text/plain", body="Unable to intake message: There is a problem with the messaging infrastructure (no_available_brokers), please contact your administrator."};
+		{error, Error} ->
+		#pe_rest_response{status=500, content_type="text/plain", body=io_lib:format("Unable to intake message: ~p",[Error])}
+	end.
 
 handle_post_message_urlencoded(Req, IsConfirmedPublishing) ->   
   PayloadContentType = get_post_var("PAYLOAD-CONTENT-TYPE",Req),
@@ -757,7 +770,6 @@ handle_status_simple(_Req) ->
       #pe_rest_response{status=503, body="SERVER-OUT"}
   end.
    
-   
 handle_create_signature(Req) ->
   Key = get_post_var("KEY",Req),
   Payload = get_post_var("PAYLOAD", Req),
@@ -769,13 +781,40 @@ handle_create_signature(Req) ->
   Result = pe_auth:make_token(Principal, Date, Sig, default_delimiter(Delim)),
   #pe_rest_response{content_type="application/json", body=io_lib:format("{\"token\": \"~s\"}",[Result])}.
   
-  
-handle_clear_subscriptions(_Req) ->
-  case pe_sub_intake:delete_all() of
-    ok ->
-      #pe_rest_response{content_type="text/plain", body="OK"};
-    ERROR ->
-      #pe_rest_response{status=500, content_type="text/plain", body=io_lib:format("Unable to clear subscriptions: ~p",[ERROR])}
-  end.
-     
-  
+% Receive loop for handling publish confirm responses from RabbitMQ ack % 
+% The possible return values are as follows:				%
+% 	publish_confirm: This means that RabbitMQ has successfully	%
+% 			written the message to disk.			%
+%	publish_reject: This response indicates that, for some reason	%
+%			RabbitMQ was unable to confirm the publishing	%
+%			and returned a basic.nack response.		%
+handle_publish_confirm_response() ->
+	receive 
+		{publish_confirm, MessageId} ->
+			#pe_rest_response{content_type="application/json", body=io_lib:format("{\"message\": {\"id\": \"~s\"}}",[MessageId])};
+		{publish_reject, MessageId} ->
+			error_logger:error_msg("pe_rest:handle_publish_confirm_response received a publish_reject for MsgId ~s~n", [MessageId]),
+			#pe_rest_response{status=500, content_type="text/plain", body=io_lib:format("Publishing of Message message failed during confirm stage: ~s",[MessageId])};
+		exit ->
+			ok;
+		_ -> 
+			error_logger:error_msg("A non-standard response was received in pe_rest_publish_confirm_response. Sending server error to publisher.~n", []),
+			#pe_rest_response{status=500, content_type="text/plain", body=io_lib:format("An unknown error occurred during the publishing of Message.",[])}
+	after
+		20000 ->
+			#pe_rest_response{status=500, content_type="text/plain", body=io_lib:format("Unable to intake message. Reason: ~s",["Timeout expired"])}
+	end.	
+
+% This method determines if the publisher has the permissions necessary to request publish_confirms % 
+is_durable_messaging_enabled(Req) ->
+	Auth = get_post_var("AUTHORIZATION", Req),
+	Delim = case get_post_var("AUTHORIZATION-DELIMITER", Req) of
+			undefined -> "|";
+			_Del -> _Del
+		end,
+	{ok, PrincipalId, _Date, _Signature} = pe_auth:parse_authorization(Auth, Delim),
+	Principal = case pe_principal_store:lookup(PrincipalId) of
+			{found, FoundPrincipal} -> FoundPrincipal;
+			_ -> undefined
+		    end,
+	pe_principal:get(durable_messaging_enabled, Principal).
